@@ -56,6 +56,12 @@ export default function RootLayout({
                 >
                   Mindmap
                 </a>
+                <a
+                  href="/notes"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Notes
+                </a>
               </div>
             </div>
           </div>
