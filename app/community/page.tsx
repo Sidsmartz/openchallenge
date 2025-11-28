@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
-import { ArrowLeft, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Search, Filter, MessageCircle, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Post {
@@ -38,11 +38,14 @@ export default function CommunityPage() {
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     checkUser();
     loadPosts();
+    loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -50,6 +53,11 @@ export default function CommunityPage() {
     loadPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, filterTags]);
+
+  useEffect(() => {
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userSearchQuery]);
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -70,6 +78,51 @@ export default function CommunityPage() {
       toast.error('Failed to load posts');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const params = new URLSearchParams();
+      if (userSearchQuery) params.append('search', userSearchQuery);
+      
+      const response = await fetch(`/api/users?${params.toString()}`, {
+        headers: session ? { 'Authorization': `Bearer ${session.access_token}` } : {},
+      });
+      const data = await response.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
+  const handleStartChat = async (userId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to chat');
+        return;
+      }
+
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ otherUserId: userId }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        router.push(`/chat?conversation=${data.conversationId}`);
+      } else {
+        toast.error('Failed to start chat');
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      toast.error('Failed to start chat');
     }
   };
 
@@ -264,8 +317,8 @@ export default function CommunityPage() {
       <Toaster position="top-right" richColors />
       
       {/* Main Content */}
-      <div className="flex-1 ml-48 p-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="flex-1 ml-48 mr-80 p-8">
+        <div className="max-w-full mx-auto">
           {/* Header */}
           <div className="bg-[#F5F1E8] rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-6">
@@ -548,10 +601,74 @@ export default function CommunityPage() {
           </div>
         </div>
 
+        {/* Right Sidebar - Users List */}
+        <div className="fixed right-0 top-0 h-screen w-80 bg-[#F5F1E8] border-l-4 border-black p-6 overflow-y-auto">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">People</h2>
+          
+          {/* User Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search people..."
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border-2 border-black rounded bg-white"
+            />
+          </div>
+
+          {/* Users List */}
+          <div className="space-y-3">
+            {users.map((user) => (
+              <div key={user.id} className="bg-white border-2 border-black rounded-lg p-3">
+                <div className="flex items-center gap-3 mb-2">
+                  {user.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt={user.full_name}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-black"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black">
+                      {user.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">
+                      {user.full_name || user.email}
+                    </p>
+                    {user.full_name && (
+                      <p className="text-xs text-gray-600 truncate">{user.email}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleStartChat(user.id)}
+                    className="flex-1 px-3 py-1.5 bg-black text-white text-sm rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Chat
+                  </button>
+                  <button
+                    className="px-3 py-1.5 border-2 border-black text-black text-sm rounded hover:bg-gray-100 transition-colors"
+                    title="View Profile"
+                  >
+                    <User className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {users.length === 0 && (
+              <p className="text-center text-gray-600 py-8">No users found</p>
+            )}
+          </div>
+        </div>
+
         {/* Floating Create Post Button */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-3xl"
+          className="fixed bottom-8 right-[22rem] w-16 h-16 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-3xl z-10"
         >
           +
         </button>
