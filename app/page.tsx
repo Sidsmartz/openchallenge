@@ -1,6 +1,61 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import Sidebar from "@/components/Sidebar";
 
 export default function Home() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    checkAccess();
+  }, []);
+
+  const checkAccess = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('/api/check-domain', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await response.json();
+      
+      if (!data.hasAccess) {
+        router.push('/restricted');
+        return;
+      }
+
+      setChecking(false);
+    } catch (error) {
+      console.error('Error checking access:', error);
+      router.push('/login');
+    }
+  };
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen bg-[#9DC4AA] items-center justify-center">
+        <p className="text-gray-700">Checking access...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#9DC4AA]">
       <Sidebar />
