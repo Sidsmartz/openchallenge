@@ -384,17 +384,23 @@ export default function CommunityPage() {
                 </div>
               </div>
 
-              {user.user_metadata?.avatar_url ? (
-                <img 
-                  src={user.user_metadata.avatar_url} 
-                  alt="Profile"
-                  className="w-9 h-9 rounded-full border-2 border-black object-cover"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                  {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              )}
+              <button
+                onClick={() => router.push(`/profile/${user.id}`)}
+                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                title="View your profile"
+              >
+                {user.user_metadata?.avatar_url ? (
+                  <img 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Profile"
+                    className="w-9 h-9 rounded-full border-2 border-black object-cover"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                    {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
             </div>
 
             {/* Community Title and Filter */}
