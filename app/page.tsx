@@ -134,7 +134,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen bg-[#9DC4AA]">
       <Sidebar />
-      <main className="flex-1 ml-48 p-8">
+      <main className="flex-1 ml-56 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="bg-[#FFF7E4] border-2 border-black p-6 mb-6 shadow-[8px_8px_0px_#000] flex items-center justify-between">

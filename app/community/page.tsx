@@ -328,7 +328,7 @@ export default function CommunityPage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-3xl font-bold mb-4 text-gray-900">Community</h1>
             <p className="text-gray-700">Please log in to view and create posts</p>
@@ -344,7 +344,7 @@ export default function CommunityPage() {
       <Toaster position="top-right" richColors />
       
       {/* Main Content */}
-      <div className="flex-1 ml-48 mr-72 p-4">
+      <div className="flex-1 ml-56 mr-72 p-4">
         <div className="max-w-4xl mx-auto">
           {/* Banned User Warning */}
           {isBanned && (
@@ -362,7 +362,7 @@ export default function CommunityPage() {
             </div>
           )}
           {/* Header */}
-          <div className="bg-white border-2 border-black rounded-lg p-4 mb-4">
+          <div className="bg-white border-2 border-black rounded-lg p-4 mb-4 shadow-[4px_4px_0px_#000]">
             <div className="flex items-center gap-3 mb-3">
               <button 
                 onClick={() => router.back()}
@@ -399,7 +399,7 @@ export default function CommunityPage() {
 
             {/* Community Title and Filter */}
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Community</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Community</h1>
               <div className="relative">
                 <button 
                   onClick={() => setShowFilterMenu(!showFilterMenu)}
@@ -469,7 +469,7 @@ export default function CommunityPage() {
               </div>
             ) : (
               posts.map((post) => (
-                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4">
+                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
                   {/* User Info */}
                   <div className="flex items-center mb-3">
                     <button
@@ -597,15 +597,25 @@ export default function CommunityPage() {
                         <div className="space-y-2">
                           {comments[post.id].map((comment: any) => (
                             <div key={comment.id} className="flex gap-2 bg-gray-50 p-2 rounded border border-gray-200">
-                              {comment.user.avatar_url ? (
-                                <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-7 h-7 rounded-full object-cover border-2 border-black" />
-                              ) : (
-                                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold border-2 border-black">
-                                  {comment.user.full_name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
+                              <button
+                                onClick={() => router.push(`/profile/${comment.user.id}`)}
+                                className="flex-shrink-0"
+                              >
+                                {comment.user.avatar_url ? (
+                                  <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-7 h-7 rounded-full object-cover border-2 border-black hover:opacity-80 transition-opacity" />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold border-2 border-black hover:opacity-80 transition-opacity">
+                                    {comment.user.full_name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </button>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-gray-900">{comment.user.full_name}</p>
+                                <button
+                                  onClick={() => router.push(`/profile/${comment.user.id}`)}
+                                  className="text-xs font-semibold text-gray-900 hover:underline text-left"
+                                >
+                                  {comment.user.full_name}
+                                </button>
                                 <p className="text-xs text-gray-700">{comment.content}</p>
                                 <p className="text-xs text-gray-500 mt-0.5">
                                   {new Date(comment.created_at).toLocaleString()}
@@ -626,10 +636,10 @@ export default function CommunityPage() {
         </div>
 
         {/* Right Sidebar */}
-        <div className="fixed right-0 top-0 h-screen w-72 bg-white border-l-2 border-black overflow-y-auto">
+        <div className="fixed right-0 top-0 h-screen w-72 bg-white border-l-2 border-black overflow-y-auto shadow-[-4px_0px_0px_#000]">
           {/* Top Posts Section - Fixed at top */}
-          <div className="p-4 border-b-2 border-black bg-[#F5F1E8]">
-            <h2 className="text-lg font-bold mb-3 text-gray-900">Top Posts This Week</h2>
+          <div className="p-4 border-b-2 border-black bg-[#F4C430]">
+            <h2 className="text-xl font-bold mb-3 text-gray-900">Top Posts This Week</h2>
             <div className="space-y-2">
               {loading ? (
                 <div className="text-center py-4">
@@ -641,7 +651,7 @@ export default function CommunityPage() {
                 </div>
               ) : (
                 posts.slice(0, 3).map((post) => (
-                  <div key={post.id} className="bg-white border-2 border-black rounded p-2 hover:bg-gray-50 transition-colors">
+                  <div key={post.id} className="bg-white border-2 border-black rounded p-2 hover:bg-gray-50 transition-colors shadow-[2px_2px_0px_#000]">
                     <div className="flex items-start gap-2">
                       <button
                         onClick={() => router.push(`/profile/${post.user.id}`)}
@@ -681,7 +691,7 @@ export default function CommunityPage() {
 
           {/* People Section - Scrollable */}
           <div className="p-4">
-            <h2 className="text-lg font-bold mb-3 text-gray-900">People</h2>
+            <h2 className="text-xl font-bold mb-3 text-gray-900">People</h2>
             
             {/* User Search */}
             <div className="relative mb-3">
@@ -698,7 +708,11 @@ export default function CommunityPage() {
             {/* Users List */}
             <div className="space-y-2">
               {users.map((user) => (
-                <div key={user.id} className="bg-white border-2 border-black rounded-lg p-2.5">
+                <div 
+                  key={user.id} 
+                  onClick={() => router.push(`/profile/${user.id}`)}
+                  className="bg-white border-2 border-black rounded-lg p-2.5 shadow-[2px_2px_0px_#000] cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                >
                   <div className="flex items-center gap-2 mb-2">
                     {user.avatar_url ? (
                       <img 
@@ -722,13 +736,20 @@ export default function CommunityPage() {
                   </div>
                   <div className="flex gap-1.5">
                     <button
-                      onClick={() => handleStartChat(user.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartChat(user.id);
+                      }}
                       className="flex-1 px-2 py-1.5 bg-black text-white text-xs rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
                       Chat
                     </button>
                     <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/profile/${user.id}`);
+                      }}
                       className="px-2 py-1.5 border-2 border-black text-black text-xs rounded hover:bg-gray-100 transition-colors"
                       title="View Profile"
                     >

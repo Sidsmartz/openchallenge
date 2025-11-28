@@ -60,9 +60,9 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
   const filteredNavItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-48 bg-[#9DC4AA] flex flex-col">
+    <div className="fixed left-0 top-0 h-screen w-56 bg-[#9DC4AA] flex flex-col">
       {/* Navigation Items */}
-      <nav className="flex-1 pt-8">
+      <nav className="flex-1 pt-8 px-4">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
@@ -71,10 +71,10 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
             <button
               key={item.path}
               onClick={() => router.push(item.path)}
-              className={`w-full flex items-center gap-3 px-6 py-3 text-left transition-colors ${
+              className={`w-full flex items-center gap-3 px-5 py-3 mb-2 text-left transition-all rounded-full ${
                 isActive
                   ? 'bg-black text-white'
-                  : 'text-gray-800 hover:bg-black/10'
+                  : 'text-gray-800 bg-transparent hover:bg-white/50 hover:shadow-[2px_2px_0px_rgba(0,0,0,0.5)]'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -85,13 +85,14 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
       </nav>
 
       {/* Logout Button */}
-      <div className="flex justify-center pb-6">
+      <div className="flex justify-center pb-6 px-4">
         <button
           onClick={handleLogout}
-          className="w-12 h-12 rounded-full bg-gray-800 text-white hover:bg-black hover:scale-110 transition-all duration-200 flex items-center justify-center shadow-lg"
+          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-gray-800 text-white hover:bg-black hover:shadow-[3px_3px_0px_rgba(0,0,0,0.6)] transition-all duration-200"
           title="Logout"
         >
           <LogOut className="w-5 h-5" />
+          <span className="font-medium">Log out</span>
         </button>
       </div>
     </div>

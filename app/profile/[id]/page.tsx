@@ -222,7 +222,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <p className="text-gray-700">Loading profile...</p>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <p className="text-gray-700">Profile not found</p>
         </div>
       </div>
@@ -246,7 +246,7 @@ export default function ProfilePage() {
       <Sidebar />
       <Toaster position="top-right" richColors />
       
-      <div className="flex-1 ml-48 p-4">
+      <div className="flex-1 ml-56 p-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
@@ -263,7 +263,7 @@ export default function ProfilePage() {
             {/* Left Column - Profile Info */}
             <div className="lg:col-span-1 space-y-4">
               {/* Main Profile Card */}
-              <div className="bg-[#F4C430] border-4 border-black rounded-lg p-6">
+              <div className="bg-[#F4C430] border-4 border-black rounded-lg p-6 shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all duration-200">
                 <div className="flex flex-col items-center">
                   {profileUser.avatar_url ? (
                     <img
@@ -297,7 +297,7 @@ export default function ProfilePage() {
                           href={social.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 bg-white border-2 border-black rounded hover:bg-gray-100 transition-colors"
+                          className="p-2 bg-white border-2 border-black rounded shadow-[2px_2px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
                           title={social.platform}
                         >
                           <LinkIcon className="w-4 h-4" />
@@ -330,7 +330,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Bio */}
-              <div className="bg-white border-2 border-black rounded-lg p-4">
+              <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all">
                 <h3 className="font-bold text-lg mb-2">About</h3>
                 {isEditing ? (
                   <textarea
@@ -346,7 +346,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Skills */}
-              <div className="bg-white border-2 border-black rounded-lg p-4">
+              <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all">
                 <h3 className="font-bold text-lg mb-2">Skills</h3>
                 {isEditing ? (
                   <input
@@ -372,7 +372,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Interests */}
-              <div className="bg-white border-2 border-black rounded-lg p-4">
+              <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all">
                 <h3 className="font-bold text-lg mb-2">Interests</h3>
                 {isEditing ? (
                   <input
@@ -410,7 +410,7 @@ export default function ProfilePage() {
             {/* Right Column - Work Experience & Socials */}
             <div className="lg:col-span-2 space-y-4">
               {/* Work Experience */}
-              <div className="bg-white border-2 border-black rounded-lg p-4">
+              <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] overflow-visible">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-xl flex items-center gap-2">
                     <Briefcase className="w-5 h-5" />
@@ -427,12 +427,15 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 overflow-visible">
                   {workExperience.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-4">No work experience added</p>
                   ) : (
                     workExperience.map((work) => (
-                      <div key={work.id} className="border-2 border-black rounded p-3 bg-gray-50">
+                      <div 
+                        key={work.id}
+                        className="group border-2 border-black rounded p-3 bg-[#FFF7E4] shadow-[2px_2px_0px_#000] cursor-pointer transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
@@ -464,7 +467,7 @@ export default function ProfilePage() {
 
               {/* Social Links Management */}
               {isOwnProfile && (
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-xl flex items-center gap-2">
                       <LinkIcon className="w-5 h-5" />
@@ -481,7 +484,7 @@ export default function ProfilePage() {
 
                   <div className="space-y-2">
                     {socials.map((social) => (
-                      <div key={social.id} className="flex items-center justify-between border-2 border-black rounded p-2">
+                      <div key={social.id} className="flex items-center justify-between border-2 border-black rounded p-2 bg-[#FFF7E4] shadow-[3px_3px_0px_#000] hover:translate-x-[-3px] hover:translate-y-[-3px] hover:shadow-[6px_6px_0px_#000] transition-all duration-200 cursor-pointer">
                         <div className="flex items-center gap-2">
                           <LinkIcon className="w-4 h-4" />
                           <span className="text-sm font-medium">{social.platform}</span>
