@@ -200,7 +200,7 @@ export default function ProfilePage() {
 
   const handleDeleteSocial = async (socialId: string) => {
     try {
-      const { error} = await (supabase as any)
+      const { error } = await (supabase as any)
         .from('socials')
         .delete()
         .eq('id', socialId);
@@ -245,7 +245,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F5F1E8] flex">
       <Sidebar />
       <Toaster position="top-right" richColors />
-      
+
       <div className="flex-1 ml-56 p-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
@@ -276,17 +276,41 @@ export default function ProfilePage() {
                       {profileUser.full_name?.charAt(0).toUpperCase() || profileUser.email.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  
+
                   <h2 className="text-2xl font-bold text-gray-900 text-center mb-1">
                     {profileUser.full_name || profileUser.email}
                   </h2>
                   <p className="text-sm text-gray-700 mb-2">{profileUser.email}</p>
-                  
+
                   {profileUser.role && (
                     <span className="px-3 py-1 bg-black text-white text-sm rounded-full mb-4">
                       {profileUser.role.charAt(0).toUpperCase() + profileUser.role.slice(1)}
                     </span>
                   )}
+
+                  {/* XP & Level */}
+                  <div className="w-full mb-6 px-2">
+                    <div className="flex justify-between items-end mb-2">
+                      <div className="text-center">
+                        <span className="block text-2xl font-black">{profileUser.xp || 0}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">XP</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-2xl font-black">Lvl {Math.floor((profileUser.xp || 0) / 100) + 1}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Level</span>
+                      </div>
+                    </div>
+                    <div className="h-3 border-2 border-black bg-white rounded-full overflow-hidden relative">
+                      <div
+                        className="h-full bg-green-500 border-r-2 border-black transition-all duration-500"
+                        style={{ width: `${((profileUser.xp || 0) % 100)}%` }}
+                      />
+                      <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,#000_5px,#000_10px)]" />
+                    </div>
+                    <p className="text-center text-[10px] font-bold mt-1 text-gray-600">
+                      {100 - ((profileUser.xp || 0) % 100)} XP to next level
+                    </p>
+                  </div>
 
                   {/* Socials */}
                   {socials.length > 0 && (
@@ -432,7 +456,7 @@ export default function ProfilePage() {
                     <p className="text-sm text-gray-500 text-center py-4">No work experience added</p>
                   ) : (
                     workExperience.map((work) => (
-                      <div 
+                      <div
                         key={work.id}
                         className="group border-2 border-black rounded p-3 bg-[#FFF7E4] shadow-[2px_2px_0px_#000] cursor-pointer transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
                       >
