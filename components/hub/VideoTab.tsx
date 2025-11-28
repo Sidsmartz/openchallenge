@@ -54,6 +54,20 @@ export default function VideoTab() {
   // Load uploaded videos on mount
   useEffect(() => {
     loadUploadedVideos();
+    
+    // Check if there's a video to auto-load from home page
+    const autoLoadVideoData = localStorage.getItem('autoLoadVideo');
+    if (autoLoadVideoData) {
+      try {
+        const videoData = JSON.parse(autoLoadVideoData);
+        // Clear the localStorage item
+        localStorage.removeItem('autoLoadVideo');
+        // Auto-select the video
+        handleVideoSelect(videoData as VideoItem);
+      } catch (error) {
+        console.error('Error auto-loading video:', error);
+      }
+    }
   }, []);
 
   const loadUploadedVideos = async () => {
@@ -77,7 +91,7 @@ export default function VideoTab() {
     }
   };
 
-  const handleVideoSelect = (video: VideoItem) => {
+  const handleVideoSelect = async (video: VideoItem) => {
     // Clean up old player
     if (playerRef.current) {
       playerRef.current.dispose();
@@ -99,6 +113,22 @@ export default function VideoTab() {
       }
     } else {
       setSubtitles([]);
+    }
+
+    // Update last watched video for the user
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        await supabase
+          .from("users")
+          .update({ last_watched_video_id: video.id })
+          .eq("id", user.id);
+        console.log("✅ Updated last watched video");
+      }
+    } catch (error) {
+      console.error("Error updating last watched video:", error);
     }
   };
 
