@@ -49,8 +49,8 @@ async function callGemini(prompt: string, model = DEFAULT_MODEL): Promise<string
         },
       ],
       generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 1024,
+        temperature: 0.4,
+        maxOutputTokens: 4096,
       },
     }),
   });
@@ -111,8 +111,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No subtitles available for this video.' }, { status: 404 });
     }
     const fullTranscript = subtitles.map(s => s.text).join(' ');
-    const prompt = `Analyze this video transcript and create a simple mindmap. Return ONLY valid JSON:\n` +
-      `{\n  "nodes": [\n    {"id": "1", "label": "Main Topic", "type": "main"},\n    {"id": "2", "label": "Topic 1", "type": "topic"},\n    {"id": "3", "label": "Topic 2", "type": "topic"}\n  ],\n  "edges": [\n    {"from": "1", "to": "2"},\n    {"from": "1", "to": "3"}\n  ]\n}\n\nKeep it simple with 1 main topic and 3–5 key topics. Transcript:\n\n${fullTranscript.substring(0, 3000)}`;
+    
+    // Use more of the transcript for better analysis
+    const transcriptToAnalyze = fullTranscript.substring(0, 8000);
+    
+    const prompt = `You are an expert at creating detailed, hierarchical mindmaps from educational content. Analyze this video transcript and create a comprehensive mindmap structure.
+
+REQUIREMENTS:
+1. Identify the main topic/theme of the video
+2. Extract 4-7 key topics (major concepts or sections)
+3. For each key topic, identify 2-4 subtopics (supporting concepts)
+4. For important subtopics, add 1-3 details (specific points, examples, or facts)
+5. Create a clear hierarchy: Main Topic → Topics → Subtopics → Details
+
+RULES:
+- Use clear, concise labels (3-8 words max)
+- Ensure logical connections between nodes
+- Focus on the most important concepts
+- Return ONLY valid JSON, no markdown formatting
+
+JSON STRUCTURE:
+{
+  "nodes": [
+    {"id": "1", "label": "Main Topic Title", "type": "main"},
+    {"id": "2", "label": "First Key Topic", "type": "topic"},
+    {"id": "3", "label": "Subtopic of First Topic", "type": "subtopic"},
+    {"id": "4", "label": "Specific Detail or Example", "type": "detail"}
+  ],
+  "edges": [
+    {"from": "1", "to": "2"},
+    {"from": "2", "to": "3"},
+    {"from": "3", "to": "4"}
+  ]
+}
+
+VIDEO TRANSCRIPT:
+${transcriptToAnalyze}
+
+Generate a detailed mindmap with at least 15-25 nodes covering the main concepts, subtopics, and key details from this content.`;
 
     const generatedText = await callGemini(prompt);
 
