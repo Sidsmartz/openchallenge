@@ -48,7 +48,7 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
   // Define navigation items based on role
   const navItems = [
     { name: 'Home', icon: Home, path: '/', roles: ['student', 'alumni', 'faculty', 'admin'] },
-    { name: 'Lecture Hub', icon: BookOpen, path: '/video', roles: ['student', 'alumni', 'faculty', 'admin'] },
+    { name: 'Learning Hub', icon: BookOpen, path: '/hub', roles: ['student', 'alumni', 'faculty', 'admin'] },
     { name: 'Community', icon: Users, path: '/community', roles: ['student', 'alumni', 'faculty', 'admin'] },
   ];
 

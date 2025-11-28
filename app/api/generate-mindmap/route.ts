@@ -75,13 +75,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
     }
 
-    const subtitlesDir = path.join(process.cwd(), 'storage', 'subtitles');
-    const subtitlePath = path.join(subtitlesDir, `${videoId}.json`);
-    if (!existsSync(subtitlePath)) {
-      return NextResponse.json({ error: 'Subtitles not found. Please generate subtitles first.' }, { status: 404 });
+    let subtitles: Subtitle[] = [];
+
+    // First, try to get subtitles from database
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: videoData, error: videoError } = await supabase
+        .from('videos')
+        .select('subtitles')
+        .eq('file_path', videoId)
+        .single();
+
+      if (!videoError && videoData?.subtitles) {
+        subtitles = JSON.parse(videoData.subtitles);
+        console.log('✅ Loaded subtitles from database');
+      }
+    } catch (dbError) {
+      console.log('ℹ️ Could not load from database, trying file system');
     }
 
-    const subtitles: Subtitle[] = JSON.parse(await readFile(subtitlePath, 'utf-8'));
+    // Fallback to file system if database doesn't have subtitles
+    if (subtitles.length === 0) {
+      const subtitlesDir = path.join(process.cwd(), 'storage', 'subtitles');
+      const subtitlePath = path.join(subtitlesDir, `${videoId}.json`);
+      
+      if (!existsSync(subtitlePath)) {
+        return NextResponse.json({ error: 'Subtitles not found. Please generate subtitles first.' }, { status: 404 });
+      }
+
+      subtitles = JSON.parse(await readFile(subtitlePath, 'utf-8'));
+      console.log('✅ Loaded subtitles from file system');
+    }
+
+    if (subtitles.length === 0) {
+      return NextResponse.json({ error: 'No subtitles available for this video.' }, { status: 404 });
+    }
     const fullTranscript = subtitles.map(s => s.text).join(' ');
     const prompt = `Analyze this video transcript and create a simple mindmap. Return ONLY valid JSON:\n` +
       `{\n  "nodes": [\n    {"id": "1", "label": "Main Topic", "type": "main"},\n    {"id": "2", "label": "Topic 1", "type": "topic"},\n    {"id": "3", "label": "Topic 2", "type": "topic"}\n  ],\n  "edges": [\n    {"from": "1", "to": "2"},\n    {"from": "1", "to": "3"}\n  ]\n}\n\nKeep it simple with 1 main topic and 3–5 key topics. Transcript:\n\n${fullTranscript.substring(0, 3000)}`;
