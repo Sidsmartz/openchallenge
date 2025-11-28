@@ -14,6 +14,76 @@ export type Database = {
   };
   public: {
     Tables: {
+      videos: {
+        Row: {
+          id: string;
+          file_path: string;
+          file_name: string;
+          video_url: string;
+          duration: number | null;
+          uploaded_by: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          file_path: string;
+          file_name: string;
+          video_url: string;
+          duration?: number | null;
+          uploaded_by?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          file_path?: string;
+          file_name?: string;
+          video_url?: string;
+          duration?: number | null;
+          uploaded_by?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      subtitles: {
+        Row: {
+          id: string;
+          video_id: string;
+          start_time: number;
+          end_time: number;
+          text: string;
+          language: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          video_id: string;
+          start_time: number;
+          end_time: number;
+          text: string;
+          language?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          video_id?: string;
+          start_time?: number;
+          end_time?: number;
+          text?: string;
+          language?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subtitles_video_id_fkey";
+            columns: ["video_id"];
+            referencedRelation: "videos";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       users: {
         Row: {
           ai_summary: string | null;
