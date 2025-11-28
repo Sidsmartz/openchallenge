@@ -25,8 +25,9 @@ export default function VideoPage() {
   const [fontSize, setFontSize] = useState(24);
   const [fontFamily, setFontFamily] = useState("Arial");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Subtitle[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [notes, setNotes] = useState<any[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
   const [translateToEnglish, setTranslateToEnglish] = useState(false);
   const [translateToLanguage, setTranslateToLanguage] =
@@ -379,7 +380,28 @@ export default function VideoPage() {
     }
   };
 
-  // Search subtitles
+  // Load notes/concepts from database
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const loadNotes = async () => {
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data, error } = await supabase
+        .from("notes")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setNotes(data);
+      }
+    } catch (error) {
+      console.error("Error loading notes:", error);
+    }
+  };
+
+  // Search notes/concepts
   const handleSearch = useCallback(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -388,26 +410,65 @@ export default function VideoPage() {
     }
 
     const query = searchQuery.toLowerCase();
-    const results = subtitles.filter((sub) =>
-      sub.text.toLowerCase().includes(query)
+    const results = notes.filter((note) =>
+      note.title?.toLowerCase().includes(query) ||
+      note.content?.toLowerCase().includes(query) ||
+      note.subject?.toLowerCase().includes(query)
     );
     setSearchResults(results);
     setShowSearchResults(results.length > 0);
-  }, [searchQuery, subtitles]);
+  }, [searchQuery, notes]);
 
   useEffect(() => {
     const timer = setTimeout(handleSearch, 300);
     return () => clearTimeout(timer);
   }, [handleSearch]);
 
-  // Jump to subtitle
-  const jumpToSubtitle = (subtitle: Subtitle) => {
-    if (playerRef.current) {
-      playerRef.current.currentTime(subtitle.start - subtitleOffset);
-      setSearchQuery("");
-      setShowSearchResults(false);
-    }
-  };
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!playerRef.current) return;
+
+      // Prevent default for arrow keys and spacebar
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          seek(-5);
+          break;
+        case 'ArrowRight':
+          seek(5);
+          break;
+        case 'ArrowUp':
+          // Volume up
+          const currentVolume = playerRef.current.volume();
+          if (currentVolume !== null && currentVolume !== undefined) {
+            playerRef.current.volume(Math.min(1, currentVolume + 0.1));
+          }
+          break;
+        case 'ArrowDown':
+          // Volume down
+          const volume = playerRef.current.volume();
+          if (volume !== null && volume !== undefined) {
+            playerRef.current.volume(Math.max(0, volume - 0.1));
+          }
+          break;
+        case ' ':
+          // Play/Pause
+          if (playerRef.current.paused()) {
+            playerRef.current.play();
+          } else {
+            playerRef.current.pause();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Format time
   const formatTime = (seconds: number): string => {
@@ -594,72 +655,55 @@ export default function VideoPage() {
 
               {/* Control Panels */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Controls */}
+                {/* Keyboard Controls Info */}
                 <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 space-y-4">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Player Controls
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Keyboard Controls
                   </h2>
-
-                  {/* Seconds Up/Down */}
-                  <div className="flex gap-4 items-center flex-wrap">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Seek Time:
-                    </label>
-                    <button
-                      onClick={() => seek(-10)}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                    >
-                      -10s
-                    </button>
-                    <button
-                      onClick={() => seek(-5)}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                    >
-                      -5s
-                    </button>
-                    <button
-                      onClick={() => seek(5)}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                    >
-                      +5s
-                    </button>
-                    <button
-                      onClick={() => seek(10)}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                    >
-                      +10s
-                    </button>
-                  </div>
-
-                  {/* Jump to Time */}
-                  <div className="flex gap-4 items-center flex-wrap">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Jump to Time:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="MM:SS"
-                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const value = e.currentTarget.value;
-                          const parts = value.split(":");
-                          if (parts.length === 2) {
-                            const mins = parseInt(parts[0], 10);
-                            const secs = parseInt(parts[1], 10);
-                            if (!isNaN(mins) && !isNaN(secs)) {
-                              jumpTo(mins * 60 + secs);
-                              e.currentTarget.value = "";
-                            }
-                          }
-                        }
-                      }}
-                    />
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-2">
+                        <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">←</kbd>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rewind 5s</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-2">
+                        <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">→</kbd>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Forward 5s</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-2">
+                        <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">↑</kbd>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Volume Up</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-2">
+                        <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">↓</kbd>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Volume Down</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 col-span-2">
+                      <div className="flex items-center gap-3 mb-2">
+                        <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">Space</kbd>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Play / Pause</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Generate Subtitles */}
                   {subtitles.length === 0 && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                        Generate Subtitles
+                      </h3>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Transcription Language:
@@ -721,7 +765,7 @@ export default function VideoPage() {
                   )}
 
                   {subtitles.length > 0 && (
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mt-6">
                       <p className="text-sm text-green-800 dark:text-green-300">
                         ✓ Subtitles loaded ({subtitles.length} segments)
                       </p>
@@ -835,47 +879,46 @@ export default function VideoPage() {
                 </div>
               </div>
 
-              {/* Search */}
-              {subtitles.length > 0 && (
-                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                    Search Subtitles
-                  </h2>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search in subtitles..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white mb-4"
-                  />
+              {/* Search Notes/Concepts */}
+              <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Search Notes & Concepts
+                </h2>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search in notes and concepts..."
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white mb-4"
+                />
 
-                  {showSearchResults && searchResults.length > 0 && (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {searchResults.map((result, index) => (
-                        <div
-                          key={index}
-                          onClick={() => jumpToSubtitle(result)}
-                          className="p-3 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg cursor-pointer transition-colors"
-                        >
-                          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                            {formatTime(result.start)} -{" "}
-                            {formatTime(result.end)}
-                          </div>
-                          <div className="text-gray-900 dark:text-white">
-                            {result.text}
-                          </div>
+                {showSearchResults && searchResults.length > 0 && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {searchResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                      >
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                          {result.title || result.subject}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          {result.subject && `Subject: ${result.subject}`}
+                        </div>
+                        <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                          {result.content}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                  {searchQuery && searchResults.length === 0 && (
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No results found
-                    </p>
-                  )}
-                </div>
-              )}
+                {searchQuery && searchResults.length === 0 && (
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No notes or concepts found
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
