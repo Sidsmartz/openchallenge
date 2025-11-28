@@ -16,8 +16,9 @@ import ReactFlow, {
   ReactFlowProvider,
   Panel,
 } from 'reactflow';
-import { toPng } from 'html-to-image';
+import { toPng } from 'html-topto-image';
 import 'reactflow/dist/style.css';
+import Sidebar from '@/components/Sidebar';
 
 interface MindmapNode {
   id: string;
@@ -319,10 +320,11 @@ function MindmapFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <div className="p-6">
+    <div className="min-h-screen bg-[#9DC4AA] flex">
+      <Sidebar />
+      <div className="flex-1 ml-48 p-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">
             Video Transcript Mindmap
           </h1>
 
