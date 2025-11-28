@@ -118,21 +118,39 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
+      // Skills is an ARRAY type in database
+      const skillsArray = typeof editedProfile.skills === 'string' 
+        ? editedProfile.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : (Array.isArray(editedProfile.skills) ? editedProfile.skills : []);
+
+      // Interests is a TEXT type in database (comma-separated string)
+      const interestsString = typeof editedProfile.interests === 'string'
+        ? editedProfile.interests.trim()
+        : (Array.isArray(editedProfile.interests) ? editedProfile.interests.join(', ') : '');
+
+      // Ensure data is properly formatted
+      const updateData = {
+        bio: editedProfile.bio || null,
+        skills: skillsArray,
+        interests: interestsString || null,
+        role: editedProfile.role || null,
+      };
+
+      console.log('Saving profile data:', updateData);
+
       const { error } = await supabase
         .from('users')
-        .update({
-          bio: editedProfile.bio,
-          skills: editedProfile.skills,
-          interests: editedProfile.interests,
-          role: editedProfile.role,
-        })
+        .update(updateData)
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       toast.success('Profile updated successfully');
       setIsEditing(false);
-      loadProfile();
+      await loadProfile(); // Wait for reload to complete
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
@@ -179,6 +197,19 @@ export default function ProfilePage() {
 
   const handleAddSocial = async () => {
     try {
+      // Validate URL
+      if (!newSocial.url || !newSocial.platform) {
+        toast.error('Please fill in both platform and URL');
+        return;
+      }
+
+      // Basic URL validation
+      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+      if (!urlPattern.test(newSocial.url)) {
+        toast.error('Please enter a valid URL');
+        return;
+      }
+
       const { error } = await (supabase as any)
         .from('socials')
         .insert({
@@ -294,11 +325,11 @@ export default function ProfilePage() {
                       {socials.map((social) => (
                         <a
                           key={social.id}
-                          href={social.url}
+                          href={social.url.startsWith('http') ? social.url : `https://${social.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 bg-white border-2 border-black rounded shadow-[2px_2px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
-                          title={social.platform}
+                          title={`${social.platform}: ${social.url}`}
                         >
                           <LinkIcon className="w-4 h-4" />
                         </a>
@@ -351,8 +382,8 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={Array.isArray(editedProfile.skills) ? editedProfile.skills.join(', ') : ''}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, skills: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    value={Array.isArray(editedProfile.skills) ? editedProfile.skills.join(', ') : (typeof editedProfile.skills === 'string' ? editedProfile.skills : '')}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, skills: e.target.value })}
                     placeholder="JavaScript, React, Node.js..."
                     className="w-full px-3 py-2 border-2 border-black rounded text-sm"
                   />
@@ -377,17 +408,17 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={Array.isArray(editedProfile.interests) ? editedProfile.interests.join(', ') : ''}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, interests: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    value={editedProfile.interests || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, interests: e.target.value })}
                     placeholder="Coding, Music, Travel..."
                     className="w-full px-3 py-2 border-2 border-black rounded text-sm"
                   />
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {profileUser.interests && Array.isArray(profileUser.interests) && profileUser.interests.length > 0 ? (
-                      profileUser.interests.map((interest: string, i: number) => (
+                    {profileUser.interests && profileUser.interests.trim() ? (
+                      profileUser.interests.split(',').map((interest: string, i: number) => (
                         <span key={i} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded border border-green-300">
-                          {interest}
+                          {interest.trim()}
                         </span>
                       ))
                     ) : (

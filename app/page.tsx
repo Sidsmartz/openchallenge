@@ -157,17 +157,23 @@ export default function Home() {
               <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
                 <Bell className="w-5 h-5" />
               </button>
-              {user?.user_metadata?.avatar_url ? (
-                <img
-                  src={user.user_metadata.avatar_url}
-                  alt="Profile"
-                  className="w-12 h-12 rounded-full border-2 border-black object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              )}
+              <button
+                onClick={() => router.push(`/profile/${user?.id}`)}
+                className="hover:opacity-80 transition-opacity"
+                title="View your profile"
+              >
+                {user?.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="Profile"
+                    className="w-12 h-12 rounded-full border-2 border-black object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-full flex items-center justify-center text-white font-bold">
+                    {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
             </div>
           </div>
 

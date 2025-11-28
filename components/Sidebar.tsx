@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, BookOpen, Users, LogOut, Shield } from 'lucide-react';
+import { Home, BookOpen, Users, LogOut, Shield, MessageCircle, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -14,10 +14,23 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminStatus();
+    getUserId();
   }, []);
+
+  const getUserId = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    } catch (error) {
+      console.error('Error getting user ID:', error);
+    }
+  };
 
   const checkAdminStatus = async () => {
     try {
@@ -50,6 +63,8 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
     { name: 'Home', icon: Home, path: '/', roles: ['student', 'alumni', 'faculty', 'admin'] },
     { name: 'Learning Hub', icon: BookOpen, path: '/hub', roles: ['student', 'alumni', 'faculty', 'admin'] },
     { name: 'Community', icon: Users, path: '/community', roles: ['student', 'alumni', 'faculty', 'admin'] },
+    { name: 'Chat', icon: MessageCircle, path: '/chat', roles: ['student', 'alumni', 'faculty', 'admin'] },
+    { name: 'Profile', icon: User, path: userId ? `/profile/${userId}` : '/profile', roles: ['student', 'alumni', 'faculty', 'admin'] },
   ];
 
   // Add admin link if user is admin
