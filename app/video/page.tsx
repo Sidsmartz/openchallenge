@@ -449,7 +449,7 @@ export default function VideoPage() {
   return (
     <div className="min-h-screen bg-[#9DC4AA] flex">
       <Sidebar />
-      <div className="flex-1 ml-48 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 ml-56 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">
             Video Player with Whisper Subtitles

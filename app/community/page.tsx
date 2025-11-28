@@ -328,7 +328,7 @@ export default function CommunityPage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-3xl font-bold mb-4 text-gray-900">Community</h1>
             <p className="text-gray-700">Please log in to view and create posts</p>
@@ -344,7 +344,7 @@ export default function CommunityPage() {
       <Toaster position="top-right" richColors />
       
       {/* Main Content */}
-      <div className="flex-1 ml-48 mr-72 p-4">
+      <div className="flex-1 ml-56 mr-72 p-4">
         <div className="max-w-4xl mx-auto">
           {/* Banned User Warning */}
           {isBanned && (

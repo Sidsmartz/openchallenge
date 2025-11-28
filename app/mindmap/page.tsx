@@ -322,7 +322,7 @@ function MindmapFlow() {
   return (
     <div className="min-h-screen bg-[#9DC4AA] flex">
       <Sidebar />
-      <div className="flex-1 ml-48 p-6">
+      <div className="flex-1 ml-56 p-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">
             Video Transcript Mindmap

@@ -219,7 +219,7 @@ export default function ChatPage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <p className="text-gray-700">Please log in to access chat</p>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function ChatPage() {
       <Sidebar />
       <Toaster position="top-right" richColors />
       
-      <div className="flex-1 ml-48 flex">
+      <div className="flex-1 ml-56 flex">
         {/* Conversations List */}
         <div className="w-72 bg-white border-r-2 border-black h-screen overflow-y-auto">
           <div className="px-4 py-4 border-b-2 border-black h-[73px] flex items-center bg-[#F4C430]">

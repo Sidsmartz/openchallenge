@@ -14,7 +14,7 @@ export default function HubPage() {
   return (
     <div className="min-h-screen bg-[#9DC4AA] flex">
       <Sidebar />
-      <div className="flex-1 ml-48 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 ml-56 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-black text-gray-900 mb-6 uppercase tracking-tight">Learning Hub</h1>
 

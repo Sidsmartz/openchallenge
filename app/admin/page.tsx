@@ -299,7 +299,7 @@ export default function AdminPage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <p className="text-gray-700">Loading...</p>
         </div>
       </div>
@@ -315,7 +315,7 @@ export default function AdminPage() {
       <Sidebar />
       <Toaster position="top-right" richColors />
       
-      <div className="flex-1 ml-48 p-4">
+      <div className="flex-1 ml-56 p-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="bg-white border-2 border-black rounded-lg p-4 mb-4">

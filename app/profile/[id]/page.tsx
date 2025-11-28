@@ -222,7 +222,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <p className="text-gray-700">Loading profile...</p>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-48 flex items-center justify-center">
+        <div className="flex-1 ml-56 flex items-center justify-center">
           <p className="text-gray-700">Profile not found</p>
         </div>
       </div>
@@ -246,7 +246,7 @@ export default function ProfilePage() {
       <Sidebar />
       <Toaster position="top-right" richColors />
       
-      <div className="flex-1 ml-48 p-4">
+      <div className="flex-1 ml-56 p-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
