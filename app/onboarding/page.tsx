@@ -11,6 +11,15 @@ export default function OnboardingPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initialStep, setInitialStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [currentStepState, setCurrentStepState] = useState(1);
+
+  // Update currentStepState when initialStep changes
+  useEffect(() => {
+    setCurrentStepState(initialStep);
+  }, [initialStep]);
 
   // Log role changes
   useEffect(() => {
@@ -99,12 +108,12 @@ export default function OnboardingPage() {
             .eq('id', session.user.id)
             .single();
 
-          if (!existingUser) {
+          if (!existingUser && session.user.email) {
             // Create minimal admin profile
-            await supabase.from('users').upsert({
+            await supabase.from('users').insert({
               id: session.user.id,
               email: session.user.email,
-              full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              full_name: session.user.user_metadata?.full_name || session.user.email.split('@')[0],
               role: 'admin',
             });
           }
@@ -112,19 +121,201 @@ export default function OnboardingPage() {
           router.push('/admin');
           return;
         }
+
+        // Check onboarding status for regular users
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (existingUser) {
+          console.log("📋 Existing user found:", existingUser);
+          
+          // Check if onboarding is complete
+          const hasRole = !!existingUser.role;
+          const hasFullName = !!existingUser.full_name;
+          const hasPreferences = existingUser.theme !== null;
+
+          if (hasRole && hasFullName && hasPreferences) {
+            console.log("✅ Onboarding complete, redirecting to home");
+            router.push('/');
+            return;
+          }
+
+          // Determine which step to resume from (now 1-indexed since login is separate)
+          if (!hasRole) {
+            console.log("📍 Resuming from step 1 (role selection)");
+            setInitialStep(1);
+          } else if (!hasFullName) {
+            console.log("📍 Resuming from step 2 (profile)");
+            setRole(existingUser.role);
+            setInitialStep(2);
+          } else if (!hasPreferences) {
+            console.log("📍 Resuming from step 3 (preferences)");
+            setRole(existingUser.role);
+            setProfileData({
+              fullName: existingUser.full_name || "",
+              programBranch: existingUser.program_branch || "",
+              yearOfStudy: existingUser.year_of_study || "",
+              interests: existingUser.interests || "",
+              coursesEnrolled: existingUser.courses_enrolled || "",
+              department: existingUser.department || "",
+              subjectsTaught: existingUser.subjects_taught || "",
+              researchInterests: existingUser.research_interests || "",
+              officeHours: existingUser.office_hours || "",
+              graduatingBatch: existingUser.graduating_batch || "",
+              currentCompany: existingUser.current_company || "",
+              currentJobTitle: existingUser.current_job_title || "",
+              availableForMentorship: existingUser.available_for_mentorship || false,
+            });
+            setInitialStep(3);
+          }
+        }
       } else {
         console.log("❌ No active session found");
       }
+      
+      setIsLoading(false);
     };
     checkSession();
   }, [router]);
 
-  // Save role after step 1
-  const handleRoleComplete = async () => {
-    if (!role) return;
+  // Save role to database
+  const saveRole = async () => {
+    if (!role || !userId || !userEmail) return;
+    
+    console.log("💾 Saving role:", role);
+    try {
+      const { error } = await supabase.from("users").upsert({
+        id: userId,
+        email: userEmail,
+        role,
+      }, {
+        onConflict: 'id'
+      });
+      
+      if (error) {
+        console.error("❌ Error saving role:", error);
+      } else {
+        console.log("✅ Role saved");
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error saving role:", err);
+    }
+  };
 
-    // Store role temporarily in localStorage
-    localStorage.setItem("onboarding_role", role);
+  // Auto-save role when it changes
+  useEffect(() => {
+    if (role && userId && userEmail) {
+      saveRole();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, userId, userEmail]);
+
+  // Validate profile fields based on role
+  const isProfileValid = () => {
+    if (!profileData.fullName.trim()) return false;
+
+    if (role === "student") {
+      return (
+        profileData.programBranch.trim() !== "" &&
+        profileData.yearOfStudy.trim() !== "" &&
+        profileData.interests.trim() !== "" &&
+        profileData.coursesEnrolled.trim() !== ""
+      );
+    } else if (role === "faculty") {
+      return (
+        profileData.department.trim() !== "" &&
+        profileData.subjectsTaught.trim() !== "" &&
+        profileData.researchInterests.trim() !== "" &&
+        profileData.officeHours.trim() !== ""
+      );
+    } else if (role === "alumni") {
+      return (
+        profileData.graduatingBatch.trim() !== "" &&
+        profileData.currentCompany.trim() !== "" &&
+        profileData.currentJobTitle.trim() !== ""
+      );
+    }
+    return false;
+  };
+
+  // Get next button props based on current step
+  const getNextButtonProps = () => {
+    if (currentStepState === 2) {
+      const isValid = isProfileValid();
+      return {
+        disabled: !isValid,
+      };
+    }
+    return {};
+  };
+
+  // Check if a step can be accessed
+  const canAccessStep = (step: number) => {
+    // Can always access current or previous steps
+    if (step <= currentStepState) return true;
+    
+    // For future steps, check if requirements are met
+    if (step === 2) return true; // Step 2 is always accessible after step 1
+    if (step === 3) {
+      // Step 3 requires step 2 to be completed with valid profile
+      return currentStepState >= 2 && isProfileValid();
+    }
+    
+    return false;
+  };
+
+  // Custom step indicator renderer
+  const renderStepIndicator = ({ step, currentStep, onStepClick }: any) => {
+    const canAccess = canAccessStep(step);
+    const isActive = currentStep === step;
+    const isComplete = currentStep > step;
+    const isClickable = canAccess && step !== currentStep;
+    
+    return (
+      <div
+        onClick={() => {
+          if (isClickable) {
+            onStepClick(step);
+          }
+        }}
+        className={`w-10 h-10 rounded-full border-2 border-black flex items-center justify-center font-bold text-sm transition-all ${
+          isActive
+            ? 'bg-[#5227FF] text-white scale-110'
+            : isComplete
+            ? 'bg-[#5227FF] text-white'
+            : 'bg-white text-black'
+        } ${
+          isClickable
+            ? 'cursor-pointer hover:scale-105'
+            : isActive
+            ? 'cursor-default'
+            : 'cursor-not-allowed opacity-50'
+        }`}
+      >
+        {isComplete ? (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={3}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        ) : isActive ? (
+          <div className="w-3 h-3 bg-white rounded-full" />
+        ) : (
+          step
+        )}
+      </div>
+    );
   };
 
   // Handle Google Sign In
@@ -194,9 +385,13 @@ export default function OnboardingPage() {
 
       console.log("📤 Upserting user data:", userData);
 
+      // Remove id from userData for update operation
+      const { id, ...updateData } = userData;
+
       const { data, error } = await supabase
         .from("users")
-        .upsert(userData)
+        .update(updateData)
+        .eq("id", userId)
         .select();
 
       console.log("📥 Upsert response:", { data, error });
@@ -256,8 +451,12 @@ export default function OnboardingPage() {
       } else {
         console.log("✅ Preferences saved successfully:", data);
         localStorage.removeItem("onboarding_role");
-        alert("Onboarding completed successfully!");
-        router.push("/");
+        setOnboardingComplete(true);
+        
+        // Redirect after showing success message
+        setTimeout(() => {
+          router.push("/");
+        }, 2000);
       }
     } catch (err) {
       console.error("💥 Unexpected error:", err);
@@ -267,11 +466,98 @@ export default function OnboardingPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7]">
+        <div className="text-xl font-bold">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show standalone login screen if user is not authenticated
+  if (!userId) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-8">
+        <div className="w-[90%] max-w-[1200px] h-[85vh] bg-[#FFF7E4] border-2 border-black p-12 flex justify-center items-center">
+          <div className="w-[700px] bg-[#F4C430] shadow-[8px_8px_0px_#000] border-2 border-black p-12">
+            <div className="flex flex-col items-center justify-center gap-6">
+              <h1 className="text-3xl font-bold text-center">Welcome!</h1>
+              <p className="text-center text-[#333] mb-4">
+                Sign in with your Google account to get started
+              </p>
+              <button
+                onClick={handleGoogleSignIn}
+                className="flex items-center gap-3 bg-white border-2 border-[#333] rounded-lg px-8 py-4 hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_#000]"
+              >
+                <svg
+                  className="w-6 h-6"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                <span className="font-medium text-lg">Sign in with Google</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show stepper for authenticated users who need to complete onboarding
   return (
     <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-8">
       <div className="w-[90%] max-w-[1200px] h-[85vh] bg-[#FFF7E4] border-2 border-black p-12 flex justify-center items-center">
         <div className="w-[700px] h-[500px] bg-[#F4C430] shadow-[8px_8px_0px_#000] overflow-hidden border-2 border-black">
-          <Stepper initialStep={1} onFinalStepCompleted={handleComplete}>
+          {onboardingComplete ? (
+            <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
+              <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center border-4 border-black shadow-[4px_4px_0px_#000]">
+                <svg
+                  className="w-12 h-12 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold text-center">All Set!</h2>
+              <p className="text-center text-lg text-[#333]">
+                Your profile has been created successfully.
+              </p>
+              <p className="text-center text-sm text-[#666]">
+                Redirecting you to the home page...
+              </p>
+            </div>
+          ) : (
+            <Stepper 
+              initialStep={initialStep} 
+              onStepChange={((step: number) => setCurrentStepState(step)) as any}
+              onFinalStepCompleted={handleComplete}
+              renderStepIndicator={renderStepIndicator}
+              nextButtonProps={getNextButtonProps()}
+            >
             {/* Step 1: Select Your Role */}
             <Step>
               <div>
@@ -279,7 +565,7 @@ export default function OnboardingPage() {
                   Choose Your Role
                 </h2>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="flex gap-3">
                   {[
                     {
                       value: "student",
@@ -300,16 +586,18 @@ export default function OnboardingPage() {
                     <button
                       key={option.value}
                       onClick={() => setRole(option.value)}
-                      className={`p-4 border-2 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[140px] ${
+                      className={`flex-1 px-4 py-6 border-2 border-black font-bold uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-2 ${
                         role === option.value
-                          ? "border-[#5227FF] bg-[#f5f3ff]"
-                          : "border-[#333] bg-white"
+                          ? "bg-[#6B9BD1] text-white shadow-[4px_4px_0px_#000] translate-x-[-2px] translate-y-[-2px]"
+                          : "bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
                       }`}
                     >
-                      <div className="font-bold mb-2 text-base">
+                      <div className="text-sm">
                         {option.title}
                       </div>
-                      <div className="text-xs text-[#666] leading-tight">
+                      <div className={`text-[0.65rem] normal-case font-normal leading-tight ${
+                        role === option.value ? "text-white/90" : "text-[#666]"
+                      }`}>
                         {option.desc}
                       </div>
                     </button>
@@ -318,59 +606,7 @@ export default function OnboardingPage() {
               </div>
             </Step>
 
-            {/* Step 2: Google Sign In */}
-            <Step>
-              <div>
-                <h2 className="text-xl font-bold mb-3 text-center">
-                  Sign In with Google
-                </h2>
-
-                <div className="flex flex-col items-center justify-center gap-4 py-8">
-                  {userId ? (
-                    <div className="text-center">
-                      <p className="text-sm text-[#333] mb-2">Signed in as:</p>
-                      <p className="font-medium">{userEmail}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-[#333] text-center mb-4">
-                        Sign in with your Google account to continue
-                      </p>
-                      <button
-                        onClick={handleGoogleSignIn}
-                        className="flex items-center gap-3 bg-white border-2 border-[#333] rounded-lg px-6 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg
-                          className="w-6 h-6"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                            fill="#4285F4"
-                          />
-                          <path
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                            fill="#34A853"
-                          />
-                          <path
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                            fill="#FBBC05"
-                          />
-                          <path
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                            fill="#EA4335"
-                          />
-                        </svg>
-                        <span className="font-medium">Sign in with Google</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Step>
-
-            {/* Step 3: Set Up Your Profile */}
+            {/* Step 2: Set Up Your Profile */}
             <Step>
               <div>
                 <h2 className="text-xl font-bold mb-3 text-center">
@@ -529,10 +765,18 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 )}
+
+                {/* {!isProfileValid() && (
+                  <div className="mt-4 p-3 bg-yellow-100 border-2 border-yellow-600 rounded-md">
+                    <p className="text-xs text-yellow-800 font-medium">
+                      Please fill in all required fields to continue
+                    </p>
+                  </div>
+                )} */}
               </div>
             </Step>
 
-            {/* Step 4: Personalize Your Experience */}
+            {/* Step 3: Personalize Your Experience */}
             <Step>
               <div>
                 <h2 className="text-xl font-bold mb-3 text-center">
@@ -627,6 +871,7 @@ export default function OnboardingPage() {
               </div>
             </Step>
           </Stepper>
+          )}
         </div>
       </div>
     </div>
@@ -638,21 +883,34 @@ function InputField({
   placeholder,
   value,
   onChange,
+  required = true,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  required?: boolean;
 }) {
+  const isEmpty = required && value.trim() === "";
+  
   return (
     <div>
-      <label className="block mb-1 font-medium text-xs">{label}</label>
+      <label className="block mb-1 font-medium text-xs">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
       <input
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full p-2 border border-[#333] rounded-md text-xs"
+        className={`w-full p-2 border-2 rounded-md text-xs transition-colors ${
+          isEmpty && value === "" 
+            ? "border-[#333]" 
+            : isEmpty 
+            ? "border-red-500 bg-red-50" 
+            : "border-[#333]"
+        }`}
       />
     </div>
   );

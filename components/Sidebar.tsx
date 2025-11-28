@@ -38,7 +38,7 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
     try {
       await supabase.auth.signOut();
       toast.success('Logged out successfully');
-      router.push('/login');
+      router.push('/onboarding');
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout');
