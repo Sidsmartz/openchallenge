@@ -549,7 +549,11 @@ export default function AdminPage() {
                     <p className="text-gray-600 text-sm text-center py-4">No users found</p>
                   ) : (
                     allUsers.map((userItem) => (
-                      <div key={userItem.id} className="border-2 border-black rounded-lg p-2.5 bg-white hover:bg-gray-50 transition-colors">
+                      <div 
+                        key={userItem.id} 
+                        onClick={() => router.push(`/profile/${userItem.id}`)}
+                        className="border-2 border-black rounded-lg p-2.5 bg-white shadow-[2px_2px_0px_#000] cursor-pointer transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             {userItem.avatar_url ? (
@@ -588,7 +592,7 @@ export default function AdminPage() {
             <div className="space-y-4">
               {/* Statistics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000]">
                   <div className="flex items-center gap-3 mb-2">
                     <Users className="w-6 h-6 text-blue-600" />
                     <h3 className="font-bold text-lg">Total Users</h3>
@@ -596,7 +600,7 @@ export default function AdminPage() {
                   <p className="text-3xl font-bold text-gray-900">{stats?.totalUsers || 0}</p>
                 </div>
 
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000]">
                   <div className="flex items-center gap-3 mb-2">
                     <MessageSquare className="w-6 h-6 text-green-600" />
                     <h3 className="font-bold text-lg">Total Posts</h3>
@@ -604,7 +608,7 @@ export default function AdminPage() {
                   <p className="text-3xl font-bold text-gray-900">{stats?.totalPosts || 0}</p>
                 </div>
 
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000]">
                   <div className="flex items-center gap-3 mb-2">
                     <MessageSquare className="w-6 h-6 text-purple-600" />
                     <h3 className="font-bold text-lg">Total Comments</h3>
@@ -612,7 +616,7 @@ export default function AdminPage() {
                   <p className="text-3xl font-bold text-gray-900">{stats?.totalComments || 0}</p>
                 </div>
 
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000]">
                   <div className="flex items-center gap-3 mb-2">
                     <AlertTriangle className="w-6 h-6 text-red-600" />
                     <h3 className="font-bold text-lg">Flagged Posts</h3>
@@ -620,7 +624,7 @@ export default function AdminPage() {
                   <p className="text-3xl font-bold text-gray-900">{stats?.flaggedPosts || 0}</p>
                 </div>
 
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000]">
                   <div className="flex items-center gap-3 mb-2">
                     <AlertTriangle className="w-6 h-6 text-yellow-600" />
                     <h3 className="font-bold text-lg">Flagged Comments</h3>
@@ -628,7 +632,7 @@ export default function AdminPage() {
                   <p className="text-3xl font-bold text-gray-900">{stats?.flaggedComments || 0}</p>
                 </div>
 
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000]">
                   <div className="flex items-center gap-3 mb-2">
                     <Ban className="w-6 h-6 text-gray-600" />
                     <h3 className="font-bold text-lg">Banned Users</h3>
@@ -640,7 +644,7 @@ export default function AdminPage() {
               {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Content Overview Bar Chart */}
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
                   <h3 className="font-bold text-lg mb-4">Content Overview</h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={[
@@ -658,7 +662,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Moderation Status Pie Chart */}
-                <div className="bg-white border-2 border-black rounded-lg p-4">
+                <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
                   <h3 className="font-bold text-lg mb-4">Moderation Status</h3>
                   {(stats?.flaggedPosts || 0) + (stats?.flaggedComments || 0) + (stats?.bannedUsers || 0) === 0 ? (
                     <div className="flex items-center justify-center h-[300px] text-gray-500">

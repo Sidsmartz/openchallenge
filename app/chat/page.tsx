@@ -234,7 +234,7 @@ export default function ChatPage() {
       <div className="flex-1 ml-48 flex">
         {/* Conversations List */}
         <div className="w-72 bg-white border-r-2 border-black h-screen overflow-y-auto">
-          <div className="px-4 py-4 border-b-2 border-black h-[73px] flex items-center">
+          <div className="px-4 py-4 border-b-2 border-black h-[73px] flex items-center bg-[#F4C430]">
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">
                 <button
@@ -243,7 +243,7 @@ export default function ChatPage() {
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
               </div>
               <button
                 onClick={() => setShowNewChatModal(true)}
@@ -265,10 +265,10 @@ export default function ChatPage() {
                 <button
                   key={conv.id}
                   onClick={() => setSelectedConversation(conv.id)}
-                  className={`w-full p-2.5 rounded-lg border-2 transition-colors text-left ${
+                  className={`w-full p-2.5 rounded-lg border-2 transition-all text-left shadow-[2px_2px_0px_#000] ${
                     selectedConversation === conv.id
                       ? 'bg-black text-white border-black'
-                      : 'bg-white border-black hover:bg-gray-50'
+                      : 'bg-white border-black hover:bg-gray-50 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export default function ChatPage() {
                   <div>
                     <button
                       onClick={() => router.push(`/profile/${selectedConv.otherUser.id}`)}
-                      className="font-bold text-lg text-gray-900 hover:underline text-left"
+                      className="font-bold text-xl text-gray-900 hover:underline text-left"
                     >
                       {selectedConv.otherUser.full_name || selectedConv.otherUser.email}
                     </button>
@@ -337,7 +337,7 @@ export default function ChatPage() {
                   return (
                     <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                        <div className={`p-3 rounded-lg border-2 border-black ${
+                        <div className={`p-3 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] ${
                           isOwn ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'
                         }`}>
                           <p className="whitespace-pre-wrap break-words">{message.content}</p>
@@ -414,7 +414,11 @@ export default function ChatPage() {
             {/* Users List */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {users.map((user) => (
-                <div key={user.id} className="bg-white border-2 border-black rounded-lg p-2.5">
+                <div 
+                  key={user.id} 
+                  onClick={() => handleStartChat(user.id)}
+                  className="bg-white border-2 border-black rounded-lg p-2.5 shadow-[2px_2px_0px_#000] cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                >
                   <div className="flex items-center gap-2 mb-2">
                     {user.avatar_url ? (
                       <img 
@@ -437,7 +441,10 @@ export default function ChatPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleStartChat(user.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartChat(user.id);
+                    }}
                     className="w-full px-2 py-1.5 bg-black text-white text-xs rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
