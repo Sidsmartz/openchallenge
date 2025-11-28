@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
-import { Play } from "lucide-react";
+import { Play, Upload as UploadIcon, Tag, X } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface Subtitle {
   start: number;
@@ -19,11 +20,16 @@ interface VideoItem {
   duration: number | null;
   created_at: string;
   subtitles: string | null;
+  title: string | null;
+  tags: string[] | null;
+  uploaded_by: string | null;
 }
 
 type VideoJSPlayer = ReturnType<typeof videojs>;
 
 export default function VideoTab() {
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
@@ -40,41 +46,96 @@ export default function VideoTab() {
   const [notes, setNotes] = useState<any[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
   const [translateToEnglish, setTranslateToEnglish] = useState(false);
-  const [translateToLanguage, setTranslateToLanguage] = useState<string>("none");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [inputMode, setInputMode] = useState<"upload" | "youtube">("upload");
   const [uploadedVideos, setUploadedVideos] = useState<VideoItem[]>([]);
+  const [filteredVideos, setFilteredVideos] = useState<VideoItem[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [showUploadForm, setShowUploadForm] = useState(false);
+  
+  // New states for title and tags
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoTags, setVideoTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<VideoJSPlayer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const subtitleContainerRef = useRef<HTMLDivElement>(null);
 
+  // Load user role and ID on mount
+  useEffect(() => {
+    loadUserRole();
+  }, []);
+
+  const loadUserRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        
+        if (userData) {
+          setUserRole(userData.role);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading user role:", error);
+    }
+  };
+
   // Load uploaded videos on mount
   useEffect(() => {
-    loadUploadedVideos();
-    loadNotes();
+    if (userRole) {
+      loadUploadedVideos();
+      loadNotes();
+    }
     
     // Check if there's a video to auto-load from home page
     const autoLoadVideoData = localStorage.getItem('autoLoadVideo');
     if (autoLoadVideoData) {
       try {
         const videoData = JSON.parse(autoLoadVideoData);
-        // Clear the localStorage item
         localStorage.removeItem('autoLoadVideo');
-        // Auto-select the video
         handleVideoSelect(videoData as VideoItem);
       } catch (error) {
         console.error('Error auto-loading video:', error);
       }
     }
-  }, []);
+  }, [userRole]);
+
+  // Filter videos when tag filter or videos change
+  useEffect(() => {
+    if (selectedTagFilter) {
+      setFilteredVideos(
+        uploadedVideos.filter(video => 
+          video.tags && video.tags.includes(selectedTagFilter)
+        )
+      );
+    } else {
+      setFilteredVideos(uploadedVideos);
+    }
+  }, [selectedTagFilter, uploadedVideos]);
+
+  // Extract all unique tags
+  useEffect(() => {
+    const tags = new Set<string>();
+    uploadedVideos.forEach(video => {
+      if (video.tags) {
+        video.tags.forEach(tag => tags.add(tag));
+      }
+    });
+    setAllTags(Array.from(tags).sort());
+  }, [uploadedVideos]);
 
   const loadNotes = async () => {
     try {
-      const { supabase } = await import("@/lib/supabase");
       const { data, error } = await supabase
         .from("notes")
         .select("*")
@@ -91,11 +152,18 @@ export default function VideoTab() {
   const loadUploadedVideos = async () => {
     try {
       setLoadingVideos(true);
-      const { supabase } = await import("@/lib/supabase");
-      const { data, error } = await supabase
+      let query = supabase
         .from("videos")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // Faculty only sees their own videos
+      if (userRole === "faculty" && userId) {
+        query = query.eq("uploaded_by", userId);
+      }
+      // Students see all videos
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error loading videos:", error);
@@ -110,7 +178,6 @@ export default function VideoTab() {
   };
 
   const handleVideoSelect = async (video: VideoItem) => {
-    // Clean up old player
     if (playerRef.current) {
       playerRef.current.dispose();
       playerRef.current = null;
@@ -120,7 +187,6 @@ export default function VideoTab() {
     setVideoUrl(video.video_url);
     setShowUploadForm(false);
 
-    // Load subtitles from the subtitles column
     if (video.subtitles) {
       try {
         const parsedSubtitles = JSON.parse(video.subtitles);
@@ -133,9 +199,7 @@ export default function VideoTab() {
       setSubtitles([]);
     }
 
-    // Update last watched video for the user
     try {
-      const { supabase } = await import("@/lib/supabase");
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -143,122 +207,33 @@ export default function VideoTab() {
           .from("users")
           .update({ last_watched_video_id: video.id })
           .eq("id", user.id);
-        console.log("✅ Updated last watched video");
       }
     } catch (error) {
       console.error("Error updating last watched video:", error);
     }
   };
 
-  // Update subtitle display
-  const updateSubtitleDisplay = useCallback(
-    (currentTime: number) => {
-      const subtitle = subtitles.find(
-        (sub) => currentTime >= sub.start && currentTime <= sub.end
-      );
-      setCurrentSubtitle(subtitle || null);
-    },
-    [subtitles]
-  );
-
-  // Initialize video.js player
-  useEffect(() => {
-    if (videoRef.current && videoUrl && !playerRef.current) {
-      const player = videojs(videoRef.current, {
-        controls: true,
-        responsive: true,
-        fluid: true,
-        playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
-      });
-
-      playerRef.current = player;
-
-      return () => {
-        if (playerRef.current) {
-          playerRef.current.dispose();
-          playerRef.current = null;
-        }
-      };
-    }
-  }, [videoUrl]);
-
-  // Handle subtitle updates on timeupdate
-  useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-
-    const handleTimeUpdate = () => {
-      const currentTime = player.currentTime();
-      if (currentTime !== null && currentTime !== undefined) {
-        updateSubtitleDisplay(currentTime + subtitleOffset);
-      }
-    };
-
-    player.on("timeupdate", handleTimeUpdate);
-
-    return () => {
-      player.off("timeupdate", handleTimeUpdate);
-    };
-  }, [subtitles, subtitleOffset, updateSubtitleDisplay]);
-
-  // Handle YouTube URL
-  const handleYoutubeSubmit = async () => {
-    if (!youtubeUrl.trim()) {
-      alert("Please enter a YouTube URL");
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    setSubtitles([]);
-    setCurrentSubtitle(null);
-    setSearchQuery("");
-    setSearchResults([]);
-
-    try {
-      // Clean up old player
-      if (playerRef.current) {
-        playerRef.current.dispose();
-        playerRef.current = null;
-      }
-
-      const response = await fetch("/api/download-youtube", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ youtubeUrl: youtubeUrl.trim() }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to download YouTube video");
-      }
-
-      const data = await response.json();
-      setVideoId(data.videoId);
-      setVideoUrl(data.videoPath);
-      setYoutubeUrl("");
-
-      // Try to load existing subtitles
-      await loadSubtitles(data.videoId);
-
-      // Reload video library
-      await loadUploadedVideos();
-    } catch (error) {
-      console.error("Error downloading YouTube video:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to download video. Please try again."
-      );
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
+  // Tag management functions
+  const addTag = () => {
+    const tag = tagInput.trim().toLowerCase();
+    if (tag && !videoTags.includes(tag)) {
+      setVideoTags([...videoTags, tag]);
+      setTagInput("");
     }
   };
 
-  // Handle file upload
+  const removeTag = (tagToRemove: string) => {
+    setVideoTags(videoTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  // Handle file upload with title and tags
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("video/")) {
@@ -266,6 +241,12 @@ export default function VideoTab() {
       return;
     }
 
+    // Validate title for faculty
+    if (userRole === "faculty" && !videoTitle.trim()) {
+      alert("Please enter a title for the video");
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
     setSubtitles([]);
@@ -274,7 +255,6 @@ export default function VideoTab() {
     setSearchResults([]);
 
     try {
-      // Clean up old player
       if (playerRef.current) {
         playerRef.current.dispose();
         playerRef.current = null;
@@ -282,15 +262,11 @@ export default function VideoTab() {
 
       console.log("📤 Uploading video to Supabase Storage...");
 
-      // Upload video to Supabase Storage
-      const { supabase } = await import("@/lib/supabase");
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
         .substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
-
-      console.log("📁 File path:", filePath);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("videos")
@@ -304,22 +280,20 @@ export default function VideoTab() {
         throw uploadError;
       }
 
-      console.log("✅ Upload successful:", uploadData);
-
-      // Get public URL
       const {
         data: { publicUrl },
       } = supabase.storage.from("videos").getPublicUrl(filePath);
 
-      console.log("🔗 Public URL:", publicUrl);
-
-      // Save video metadata to database
+      // Save video metadata with title and tags
       const { data: videoData, error: dbError } = await supabase
         .from("videos")
         .insert({
           file_path: filePath,
           file_name: file.name,
           video_url: publicUrl,
+          title: videoTitle.trim() || file.name,
+          tags: videoTags.length > 0 ? videoTags : null,
+          uploaded_by: userId,
         })
         .select()
         .single();
@@ -332,12 +306,16 @@ export default function VideoTab() {
 
       setVideoId(filePath);
       setVideoUrl(publicUrl);
+      
+      // Reset form
+      setVideoTitle("");
+      setVideoTags([]);
+      setTagInput("");
 
-      // Try to load existing subtitles from database
       await loadSubtitles(filePath);
-
-      // Reload video library
       await loadUploadedVideos();
+      
+      alert("Video uploaded successfully!");
     } catch (error) {
       console.error("💥 Error uploading video:", error);
       alert(
@@ -351,13 +329,76 @@ export default function VideoTab() {
     }
   };
 
-  // Load subtitles from database
+  // Handle YouTube URL
+  const handleYoutubeSubmit = async () => {
+    if (!youtubeUrl.trim()) {
+      alert("Please enter a YouTube URL");
+      return;
+    }
+
+    if (userRole === "faculty" && !videoTitle.trim()) {
+      alert("Please enter a title for the video");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setSubtitles([]);
+    setCurrentSubtitle(null);
+    setSearchQuery("");
+    setSearchResults([]);
+
+    try {
+      if (playerRef.current) {
+        playerRef.current.dispose();
+        playerRef.current = null;
+      }
+
+      const response = await fetch("/api/download-youtube", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          youtubeUrl: youtubeUrl.trim(),
+          title: videoTitle.trim(),
+          tags: videoTags.length > 0 ? videoTags : null,
+          uploadedBy: userId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to download YouTube video");
+      }
+
+      const data = await response.json();
+      setVideoId(data.videoId);
+      setVideoUrl(data.videoPath);
+      setYoutubeUrl("");
+      setVideoTitle("");
+      setVideoTags([]);
+      setTagInput("");
+
+      await loadSubtitles(data.videoId);
+      await loadUploadedVideos();
+      
+      alert("YouTube video downloaded successfully!");
+    } catch (error) {
+      console.error("Error downloading YouTube video:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to download video. Please try again."
+      );
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
   const loadSubtitles = async (filePath: string) => {
     try {
-      console.log("📥 Loading subtitles for:", filePath);
-      const { supabase } = await import("@/lib/supabase");
-
-      // Get the video with subtitles
       const { data: videoData, error: videoError } = await supabase
         .from("videos")
         .select("subtitles")
@@ -365,28 +406,22 @@ export default function VideoTab() {
         .single();
 
       if (videoError || !videoData) {
-        console.log("ℹ️ No video found in database");
         return;
       }
 
-      // Parse subtitles from JSON
       if (videoData.subtitles) {
         try {
           const parsedSubtitles = JSON.parse(videoData.subtitles);
-          console.log("✅ Loaded subtitles:", parsedSubtitles.length);
           setSubtitles(parsedSubtitles);
         } catch (parseError) {
           console.error("❌ Error parsing subtitles:", parseError);
         }
-      } else {
-        console.log("ℹ️ No subtitles found for this video");
       }
     } catch (error) {
       console.error("💥 Error loading subtitles:", error);
     }
   };
 
-  // Generate subtitles using Whisper
   const generateSubtitles = async () => {
     if (!videoId || !videoUrl) return;
 
@@ -415,12 +450,9 @@ export default function VideoTab() {
       const data = await response.json();
       setSubtitles(data.subtitles);
 
-      // Save subtitles to database
       await saveSubtitlesToDatabase(videoId, data.subtitles);
 
-      // Update the videos table with subtitles
       try {
-        const { supabase } = await import("@/lib/supabase");
         const { error: updateError } = await supabase
           .from("videos")
           .update({ subtitles: JSON.stringify(data.subtitles) } as any)
@@ -428,14 +460,11 @@ export default function VideoTab() {
         
         if (updateError) {
           console.error("Error updating videos table:", updateError);
-        } else {
-          console.log("✅ Subtitles saved to videos table");
         }
       } catch (error) {
         console.error("Error updating videos table:", error);
       }
 
-      // Update subtitle display if video is playing
       if (playerRef.current && !playerRef.current.paused()) {
         const currentTime = playerRef.current.currentTime();
         if (currentTime !== null && currentTime !== undefined) {
@@ -443,7 +472,6 @@ export default function VideoTab() {
         }
       }
 
-      // Reload video library to show CC badge
       await loadUploadedVideos();
     } catch (error) {
       console.error("Error generating subtitles:", error);
@@ -457,16 +485,11 @@ export default function VideoTab() {
     }
   };
 
-  // Save subtitles to database (now stored in videos table)
   const saveSubtitlesToDatabase = async (
     filePath: string,
     subtitles: Subtitle[]
   ) => {
     try {
-      console.log("💾 Saving subtitles to database...");
-      const { supabase } = await import("@/lib/supabase");
-
-      // Update the videos table with subtitles
       const { error: updateError } = await supabase
         .from("videos")
         .update({ subtitles: JSON.stringify(subtitles) } as any)
@@ -474,15 +497,60 @@ export default function VideoTab() {
 
       if (updateError) {
         console.error("❌ Error saving subtitles:", updateError);
-      } else {
-        console.log("✅ Subtitles saved successfully");
       }
     } catch (error) {
       console.error("💥 Error saving subtitles:", error);
     }
   };
 
-  // Search notes/concepts
+  const updateSubtitleDisplay = useCallback(
+    (currentTime: number) => {
+      const subtitle = subtitles.find(
+        (sub) => currentTime >= sub.start && currentTime <= sub.end
+      );
+      setCurrentSubtitle(subtitle || null);
+    },
+    [subtitles]
+  );
+
+  useEffect(() => {
+    if (videoRef.current && videoUrl && !playerRef.current) {
+      const player = videojs(videoRef.current, {
+        controls: true,
+        responsive: true,
+        fluid: true,
+        playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+      });
+
+      playerRef.current = player;
+
+      return () => {
+        if (playerRef.current) {
+          playerRef.current.dispose();
+          playerRef.current = null;
+        }
+      };
+    }
+  }, [videoUrl]);
+
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    const handleTimeUpdate = () => {
+      const currentTime = player.currentTime();
+      if (currentTime !== null && currentTime !== undefined) {
+        updateSubtitleDisplay(currentTime + subtitleOffset);
+      }
+    };
+
+    player.on("timeupdate", handleTimeUpdate);
+
+    return () => {
+      player.off("timeupdate", handleTimeUpdate);
+    };
+  }, [subtitles, subtitleOffset, updateSubtitleDisplay]);
+
   const handleSearch = useCallback(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -505,12 +573,10 @@ export default function VideoTab() {
     return () => clearTimeout(timer);
   }, [handleSearch]);
 
-  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!playerRef.current || !videoUrl) return;
 
-      // Prevent default for arrow keys and spacebar
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
         e.preventDefault();
       }
@@ -523,21 +589,18 @@ export default function VideoTab() {
           seek(5);
           break;
         case 'ArrowUp':
-          // Volume up
           const currentVolume = playerRef.current.volume();
           if (currentVolume !== null && currentVolume !== undefined) {
             playerRef.current.volume(Math.min(1, currentVolume + 0.1));
           }
           break;
         case 'ArrowDown':
-          // Volume down
           const volume = playerRef.current.volume();
           if (volume !== null && volume !== undefined) {
             playerRef.current.volume(Math.max(0, volume - 0.1));
           }
           break;
         case ' ':
-          // Play/Pause
           if (playerRef.current.paused()) {
             playerRef.current.play();
           } else {
@@ -551,14 +614,12 @@ export default function VideoTab() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [videoUrl]);
 
-  // Format time
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Seek controls
   const seek = (seconds: number) => {
     if (playerRef.current) {
       const currentTime = playerRef.current.currentTime();
@@ -575,18 +636,17 @@ export default function VideoTab() {
     }
   };
 
-  const jumpTo = (time: number) => {
-    if (playerRef.current) {
-      const duration = playerRef.current.duration();
-      if (duration !== null && duration !== undefined) {
-        playerRef.current.currentTime(Math.max(0, Math.min(duration, time)));
-      }
-    }
-  };
-
   const adjustSubtitleOffset = (seconds: number) => {
     setSubtitleOffset((prev) => prev + seconds);
   };
+
+  if (!userRole) {
+    return (
+      <div className="bg-[#FFF7E4] border-2 border-black p-12 text-center shadow-[8px_8px_0px_#000] min-h-[75vh]">
+        <p className="text-gray-600 font-bold">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -594,38 +654,83 @@ export default function VideoTab() {
       {!videoUrl && !showUploadForm && (
         <div className="bg-[#FFF7E4] border-2 border-black p-6 shadow-[8px_8px_0px_#000] min-h-[75vh]">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-black uppercase tracking-tight">Video Library</h2>
-            <button
-              onClick={() => setShowUploadForm(true)}
-              className="px-6 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
-            >
-              Upload New Video
-            </button>
+            <h2 className="text-2xl font-black uppercase tracking-tight">
+              {userRole === "faculty" ? "My Videos" : "Video Library"}
+            </h2>
+            {userRole === "faculty" && (
+              <button
+                onClick={() => setShowUploadForm(true)}
+                className="px-6 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+              >
+                Upload New Video
+              </button>
+            )}
           </div>
+
+          {/* Tag Filter for Students */}
+          {userRole === "student" && allTags.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                Filter by Tag:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedTagFilter(null)}
+                  className={`px-4 py-2 border-2 border-black font-bold text-sm uppercase tracking-wider transition-all ${
+                    selectedTagFilter === null
+                      ? "bg-[#6B9BD1] text-white shadow-[4px_4px_0px_#000] translate-x-[-2px] translate-y-[-2px]"
+                      : "bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                  }`}
+                >
+                  All
+                </button>
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTagFilter(tag)}
+                    className={`px-4 py-2 border-2 border-black font-bold text-sm uppercase tracking-wider transition-all ${
+                      selectedTagFilter === tag
+                        ? "bg-[#6B9BD1] text-white shadow-[4px_4px_0px_#000] translate-x-[-2px] translate-y-[-2px]"
+                        : "bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loadingVideos ? (
             <div className="bg-white border-2 border-black p-12 text-center shadow-[4px_4px_0px_#000]">
               <p className="text-gray-600 font-bold">Loading videos...</p>
             </div>
-          ) : uploadedVideos.length === 0 ? (
+          ) : filteredVideos.length === 0 ? (
             <div className="bg-white border-2 border-black p-12 text-center shadow-[4px_4px_0px_#000]">
-              <p className="text-gray-600 font-bold mb-4">No videos uploaded yet</p>
-              <button
-                onClick={() => setShowUploadForm(true)}
-                className="px-6 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
-              >
-                Upload Your First Video
-              </button>
+              <p className="text-gray-600 font-bold mb-4">
+                {userRole === "faculty" 
+                  ? "No videos uploaded yet" 
+                  : selectedTagFilter 
+                    ? `No videos found with tag "${selectedTagFilter}"` 
+                    : "No videos available yet"}
+              </p>
+              {userRole === "faculty" && (
+                <button
+                  onClick={() => setShowUploadForm(true)}
+                  className="px-6 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                >
+                  Upload Your First Video
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {uploadedVideos.map((video) => (
+              {filteredVideos.map((video) => (
                 <div
                   key={video.id}
                   onClick={() => handleVideoSelect(video)}
                   className="bg-white border-2 border-black overflow-hidden cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
                 >
-                  {/* Video Thumbnail */}
                   <div className="relative aspect-video bg-gray-900 flex items-center justify-center group">
                     <video
                       src={video.video_url}
@@ -644,11 +749,27 @@ export default function VideoTab() {
                     )}
                   </div>
 
-                  {/* Video Info */}
                   <div className="p-4 border-t-2 border-black">
                     <h3 className="font-bold text-gray-900 truncate mb-1">
-                      {video.file_name}
+                      {video.title || video.file_name}
                     </h3>
+                    {video.tags && video.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {video.tags.slice(0, 3).map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 bg-[#6B9BD1] text-white text-xs font-bold border border-black"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {video.tags.length > 3 && (
+                          <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs font-bold border border-black">
+                            +{video.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <p className="text-sm text-gray-600 font-medium">
                       {new Date(video.created_at).toLocaleDateString()}
                     </p>
@@ -665,17 +786,78 @@ export default function VideoTab() {
         </div>
       )}
 
-      {/* File Upload / YouTube */}
-      {!videoUrl && showUploadForm && (
+      {/* File Upload / YouTube - Faculty Only */}
+      {!videoUrl && showUploadForm && userRole === "faculty" && (
         <div className="bg-[#FFF7E4] border-2 border-black p-8 shadow-[8px_8px_0px_#000]">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-black uppercase tracking-tight">Upload Video</h2>
             <button
-              onClick={() => setShowUploadForm(false)}
+              onClick={() => {
+                setShowUploadForm(false);
+                setVideoTitle("");
+                setVideoTags([]);
+                setTagInput("");
+              }}
               className="px-4 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
             >
               Back to Library
             </button>
+          </div>
+
+          {/* Title and Tags Input */}
+          <div className="mb-6 space-y-4 bg-white border-2 border-black p-6">
+            <div>
+              <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                Video Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={videoTitle}
+                onChange={(e) => setVideoTitle(e.target.value)}
+                placeholder="Enter video title"
+                className="w-full px-4 py-3 border-2 border-black bg-white font-medium focus:outline-none focus:shadow-[4px_4px_0px_#000] transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                Tags (Optional)
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  placeholder="Add a tag and press Enter"
+                  className="flex-1 px-4 py-3 border-2 border-black bg-white font-medium focus:outline-none focus:shadow-[4px_4px_0px_#000] transition-all"
+                />
+                <button
+                  onClick={addTag}
+                  className="px-6 py-3 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                >
+                  <Tag className="w-5 h-5" />
+                </button>
+              </div>
+              {videoTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {videoTags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-[#6B9BD1] text-white border-2 border-black font-bold text-sm flex items-center gap-2"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => removeTag(tag)}
+                        className="hover:text-red-300"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Toggle Buttons */}
@@ -763,10 +945,9 @@ export default function VideoTab() {
         </div>
       )}
 
-      {/* Video Player */}
+      {/* Video Player - Simplified for both roles */}
       {videoUrl && (
         <div className="space-y-6">
-          {/* Video Container */}
           <div
             className="bg-black rounded-lg overflow-hidden relative"
             style={{ aspectRatio: "16/9" }}
@@ -778,22 +959,9 @@ export default function VideoTab() {
                 playsInline
               >
                 <source src={videoUrl} type="video/mp4" />
-                <p className="vjs-no-js">
-                  To view this video please enable JavaScript, and consider
-                  upgrading to a web browser that
-                  <a
-                    href="https://videojs.com/html5-video-support/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    supports HTML5 video
-                  </a>
-                  .
-                </p>
               </video>
             </div>
 
-            {/* Custom Subtitle Overlay */}
             {currentSubtitle && (
               <div
                 ref={subtitleContainerRef}
@@ -810,126 +978,37 @@ export default function VideoTab() {
             )}
           </div>
 
-          {/* Control Panels */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Keyboard Controls Info */}
-            <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Keyboard Controls
+            <div className="lg:col-span-2 bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
+              <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
+                Controls
               </h2>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-2">
-                    <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">←</kbd>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rewind 5s</span>
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-2">
-                    <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">→</kbd>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Forward 5s</span>
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-2">
-                    <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">↑</kbd>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Volume Up</span>
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-2">
-                    <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">↓</kbd>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Volume Down</span>
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 col-span-2">
-                  <div className="flex items-center gap-3 mb-2">
-                    <kbd className="px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-black rounded text-sm font-bold">Space</kbd>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Play / Pause</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Generate Subtitles */}
-              {subtitles.length === 0 && (
-                <div className="space-y-3 mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              {subtitles.length === 0 && userRole === "faculty" && (
+                <div className="space-y-3 mb-6 pb-6 border-b-2 border-gray-200">
+                  <h3 className="text-lg font-bold uppercase tracking-wider">
                     Generate Subtitles
                   </h3>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Transcription Language:
-                    </label>
-                    <select
-                      value={selectedLanguage}
-                      onChange={(e) => setSelectedLanguage(e.target.value)}
-                      disabled={isGeneratingSubtitles}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                    >
-                      <option value="auto">Auto-detect</option>
-                      <option value="en">English</option>
-                      <option value="es">Spanish</option>
-                      <option value="fr">French</option>
-                      <option value="de">German</option>
-                      <option value="it">Italian</option>
-                      <option value="pt">Portuguese</option>
-                      <option value="ru">Russian</option>
-                      <option value="ja">Japanese</option>
-                      <option value="ko">Korean</option>
-                      <option value="zh">Chinese</option>
-                      <option value="ar">Arabic</option>
-                      <option value="hi">Hindi</option>
-                      <option value="tr">Turkish</option>
-                      <option value="pl">Polish</option>
-                      <option value="nl">Dutch</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="translate"
-                      checked={translateToEnglish}
-                      onChange={(e) =>
-                        setTranslateToEnglish(e.target.checked)
-                      }
-                      disabled={isGeneratingSubtitles}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <label
-                      htmlFor="translate"
-                      className="text-sm text-gray-700 dark:text-gray-300"
-                    >
-                      Translate to English
-                    </label>
-                  </div>
-
                   <button
                     onClick={generateSubtitles}
                     disabled={isGeneratingSubtitles}
-                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                    className="w-full px-4 py-2 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
                   >
                     {isGeneratingSubtitles
-                      ? "Generating Subtitles with Local Whisper..."
+                      ? "Generating..."
                       : "Generate Subtitles"}
                   </button>
                 </div>
               )}
 
               {subtitles.length > 0 && (
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mt-6">
-                  <p className="text-sm text-green-800 dark:text-green-300">
+                <div className="p-3 bg-green-50 border-2 border-green-500 mb-6">
+                  <p className="text-sm text-green-800 font-bold">
                     ✓ Subtitles loaded ({subtitles.length} segments)
                   </p>
                 </div>
               )}
 
-              {/* Change Video */}
               <button
                 onClick={() => {
                   if (playerRef.current) {
@@ -947,135 +1026,80 @@ export default function VideoTab() {
                   setSearchResults([]);
                   setShowUploadForm(false);
                 }}
-                className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-medium rounded-lg transition-colors"
+                className="w-full px-4 py-2 bg-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
               >
                 Back to Library
               </button>
             </div>
 
-            {/* Subtitle Controls */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
+              <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
                 Subtitle Settings
               </h2>
 
-              {/* Font Size */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Font Size: {fontSize}px
-                </label>
-                <input
-                  type="range"
-                  min="12"
-                  max="48"
-                  value={fontSize}
-                  onChange={(e) =>
-                    setFontSize(parseInt(e.target.value, 10))
-                  }
-                  className="w-full"
-                />
-              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                    Font Size: {fontSize}px
+                  </label>
+                  <input
+                    type="range"
+                    min="12"
+                    max="48"
+                    value={fontSize}
+                    onChange={(e) =>
+                      setFontSize(parseInt(e.target.value, 10))
+                    }
+                    className="w-full"
+                  />
+                </div>
 
-              {/* Font Family */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Font Family:
-                </label>
-                <select
-                  value={fontFamily}
-                  onChange={(e) => setFontFamily(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                >
-                  <option value="Arial">Arial</option>
-                  <option value="Helvetica">Helvetica</option>
-                  <option value="Times New Roman">Times New Roman</option>
-                  <option value="Courier New">Courier New</option>
-                  <option value="Verdana">Verdana</option>
-                  <option value="Georgia">Georgia</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                    Font Family:
+                  </label>
+                  <select
+                    value={fontFamily}
+                    onChange={(e) => setFontFamily(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-black bg-white font-medium"
+                  >
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Georgia">Georgia</option>
+                  </select>
+                </div>
 
-              {/* Subtitle Offset */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Subtitle Timing Offset: {subtitleOffset > 0 ? "+" : ""}
-                  {subtitleOffset.toFixed(1)}s
-                </label>
-                <div className="flex gap-2">
+                <div>
+                  <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                    Timing Offset: {subtitleOffset > 0 ? "+" : ""}
+                    {subtitleOffset.toFixed(1)}s
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => adjustSubtitleOffset(-0.5)}
+                      className="px-3 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] transition-all"
+                    >
+                      -0.5s
+                    </button>
+                    <button
+                      onClick={() => adjustSubtitleOffset(0.5)}
+                      className="px-3 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] transition-all"
+                    >
+                      +0.5s
+                    </button>
+                  </div>
                   <button
-                    onClick={() => adjustSubtitleOffset(-1)}
-                    className="flex-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
+                    onClick={() => setSubtitleOffset(0)}
+                    className="w-full mt-2 px-3 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] transition-all"
                   >
-                    -1s
-                  </button>
-                  <button
-                    onClick={() => adjustSubtitleOffset(-0.5)}
-                    className="flex-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                  >
-                    -0.5s
-                  </button>
-                  <button
-                    onClick={() => adjustSubtitleOffset(0.5)}
-                    className="flex-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                  >
-                    +0.5s
-                  </button>
-                  <button
-                    onClick={() => adjustSubtitleOffset(1)}
-                    className="flex-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                  >
-                    +1s
+                    Reset
                   </button>
                 </div>
-                <button
-                  onClick={() => setSubtitleOffset(0)}
-                  className="w-full mt-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg text-gray-900 dark:text-white transition-colors"
-                >
-                  Reset Offset
-                </button>
               </div>
             </div>
-          </div>
-
-          {/* Search Notes/Concepts */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Search Notes & Concepts
-            </h2>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search in notes and concepts..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white mb-4"
-            />
-
-            {showSearchResults && searchResults.length > 0 && (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {searchResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
-                  >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                      {result.title || result.subject}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      {result.subject && `Subject: ${result.subject}`}
-                    </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                      {result.content}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchQuery && searchResults.length === 0 && (
-              <p className="text-gray-500 dark:text-gray-400">
-                No notes or concepts found
-              </p>
-            )}
           </div>
         </div>
       )}
