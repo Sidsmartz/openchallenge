@@ -27,6 +27,45 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${spaceMono.variable} ${roboto.variable} antialiased`}>
+
+        <nav className="bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-gray-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex space-x-8">
+                <a
+                  href="/"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Home
+                </a>
+                <a
+                  href="/video"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Video Player
+                </a>
+                <a
+                  href="/community"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Community
+                </a>
+                <a
+                  href="/mindmap"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Mindmap
+                </a>
+                <a
+                  href="/notes"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Notes
+                </a>
+              </div>
+            </div>
+          </div>
+        </nav>
         {children}
       </body>
     </html>
