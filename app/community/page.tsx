@@ -30,7 +30,7 @@ export default function CommunityPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [commentingOn, setCommentingOn] = useState<string | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<{[key: string]: any[]}>({});
   const [loadingComments, setLoadingComments] = useState<{[key: string]: boolean}>({});
@@ -49,6 +49,21 @@ export default function CommunityPage() {
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Load comments for all posts and expand them by default
+    if (posts.length > 0) {
+      const newExpanded = new Set<string>();
+      posts.forEach(post => {
+        newExpanded.add(post.id);
+        if (!comments[post.id]) {
+          loadComments(post.id);
+        }
+      });
+      setExpandedComments(newExpanded);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts.length]);
 
   useEffect(() => {
     loadPosts();
@@ -457,17 +472,22 @@ export default function CommunityPage() {
                 <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4">
                   {/* User Info */}
                   <div className="flex items-center mb-3">
-                    {post.user.avatar_url ? (
-                      <img 
-                        src={post.user.avatar_url} 
-                        alt={post.user.full_name}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-black"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black">
-                        {post.user.full_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <button
+                      onClick={() => router.push(`/profile/${post.user.id}`)}
+                      className="flex-shrink-0"
+                    >
+                      {post.user.avatar_url ? (
+                        <img 
+                          src={post.user.avatar_url} 
+                          alt={post.user.full_name}
+                          className="w-10 h-10 rounded-full object-cover border-2 border-black hover:opacity-80 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black hover:opacity-80 transition-opacity">
+                          {post.user.full_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </button>
                     <div className="ml-3">
                       <button
                         onClick={() => router.push(`/profile/${post.user.id}`)}
@@ -522,11 +542,17 @@ export default function CommunityPage() {
 
                     <button
                       onClick={() => {
-                        const isOpening = commentingOn !== post.id;
-                        setCommentingOn(isOpening ? post.id : null);
-                        if (isOpening && !comments[post.id]) {
-                          loadComments(post.id);
+                        const isExpanded = expandedComments.has(post.id);
+                        const newExpanded = new Set(expandedComments);
+                        if (isExpanded) {
+                          newExpanded.delete(post.id);
+                        } else {
+                          newExpanded.add(post.id);
+                          if (!comments[post.id]) {
+                            loadComments(post.id);
+                          }
                         }
+                        setExpandedComments(newExpanded);
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded border-2 border-black bg-white text-gray-700 hover:bg-gray-100 transition-colors text-sm"
                     >
@@ -538,7 +564,7 @@ export default function CommunityPage() {
                   </div>
 
                   {/* Comments Section */}
-                  {commentingOn === post.id && (
+                  {expandedComments.has(post.id) && (
                     <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
                       {/* Comment Input */}
                       {isBanned ? (
@@ -615,19 +641,24 @@ export default function CommunityPage() {
                 </div>
               ) : (
                 posts.slice(0, 3).map((post) => (
-                  <div key={post.id} className="bg-white border-2 border-black rounded p-2 hover:bg-gray-50 transition-colors cursor-pointer">
+                  <div key={post.id} className="bg-white border-2 border-black rounded p-2 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start gap-2">
-                      {post.user.avatar_url ? (
-                        <img 
-                          src={post.user.avatar_url} 
-                          alt={post.user.full_name}
-                          className="w-8 h-8 rounded-full border-2 border-black object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                          {post.user.full_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <button
+                        onClick={() => router.push(`/profile/${post.user.id}`)}
+                        className="flex-shrink-0"
+                      >
+                        {post.user.avatar_url ? (
+                          <img 
+                            src={post.user.avatar_url} 
+                            alt={post.user.full_name}
+                            className="w-8 h-8 rounded-full border-2 border-black object-cover hover:opacity-80 transition-opacity"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-xs hover:opacity-80 transition-opacity">
+                            {post.user.full_name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </button>
                       <div className="flex-1 min-w-0">
                         <button
                           onClick={() => router.push(`/profile/${post.user.id}`)}
