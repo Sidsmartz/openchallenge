@@ -16,7 +16,7 @@ import ReactFlow, {
   ReactFlowProvider,
   Panel,
 } from 'reactflow';
-import { toPng } from 'html-topto-image';
+import { toPng } from 'html-to-image';
 import 'reactflow/dist/style.css';
 import Sidebar from '@/components/Sidebar';
 

@@ -198,6 +198,25 @@ export async function POST(request: NextRequest) {
         "utf-8"
       );
 
+      // Save subtitles to database
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        const { error: updateError } = await supabase
+          .from("videos")
+          .update({ subtitles: JSON.stringify(subtitles) })
+          .eq("file_path", videoId);
+
+        if (updateError) {
+          console.error("Error updating subtitles in database:", updateError);
+          // Don't fail the request if database update fails
+        } else {
+          console.log("Subtitles saved to database successfully");
+        }
+      } catch (dbError) {
+        console.error("Error saving subtitles to database:", dbError);
+        // Don't fail the request if database update fails
+      }
+
       return NextResponse.json({
         success: true,
         subtitles,

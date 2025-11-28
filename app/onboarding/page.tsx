@@ -67,12 +67,57 @@ export default function OnboardingPage() {
         });
         setUserId(session.user.id);
         setUserEmail(session.user.email || null);
+
+        // Check domain access
+        const response = await fetch('/api/check-domain', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+        const data = await response.json();
+        
+        if (!data.hasAccess) {
+          console.log("❌ Domain not allowed, redirecting to restricted page");
+          router.push('/restricted');
+          return;
+        }
+
+        // Check if user is admin
+        const adminResponse = await fetch('/api/admin/check', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+        const adminData = await adminResponse.json();
+        
+        if (adminData.isAdmin) {
+          console.log("👑 Admin user detected, skipping onboarding");
+          // Check if admin profile exists in users table
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!existingUser) {
+            // Create minimal admin profile
+            await supabase.from('users').upsert({
+              id: session.user.id,
+              email: session.user.email,
+              full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              role: 'admin',
+            });
+          }
+          
+          router.push('/admin');
+          return;
+        }
       } else {
         console.log("❌ No active session found");
       }
     };
     checkSession();
-  }, []);
+  }, [router]);
 
   // Save role after step 1
   const handleRoleComplete = async () => {
