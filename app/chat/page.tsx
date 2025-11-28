@@ -261,69 +261,72 @@ export default function ChatPage() {
             ) : conversations.length === 0 ? (
               <p className="text-center text-gray-600 py-6 text-sm">No conversations yet</p>
             ) : (
-              conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => setSelectedConversation(conv.id)}
-                  className={`w-full p-2.5 rounded-lg border-2 transition-all text-left shadow-[2px_2px_0px_#000] ${
-                    selectedConversation === conv.id
-                      ? 'bg-black text-white border-black'
-                      : 'bg-white border-black hover:bg-gray-50 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {conv.otherUser.avatar_url ? (
-                      <img 
-                        src={conv.otherUser.avatar_url} 
-                        alt={conv.otherUser.full_name}
-                        className="w-9 h-9 rounded-full object-cover border-2 border-black"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm border-2 border-black">
-                        {conv.otherUser.full_name?.charAt(0).toUpperCase() || conv.otherUser.email?.charAt(0).toUpperCase()}
+              conversations.map((conv) => {
+                if (!conv.otherUser) return null;
+                return (
+                  <button
+                    key={conv.id}
+                    onClick={() => setSelectedConversation(conv.id)}
+                    className={`w-full p-2.5 rounded-lg border-2 transition-all text-left shadow-[2px_2px_0px_#000] ${
+                      selectedConversation === conv.id
+                        ? 'bg-black text-white border-black'
+                        : 'bg-white border-black hover:bg-gray-50 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {conv.otherUser?.avatar_url ? (
+                        <img 
+                          src={conv.otherUser.avatar_url} 
+                          alt={conv.otherUser.full_name || 'User'}
+                          className="w-9 h-9 rounded-full object-cover border-2 border-black"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm border-2 border-black">
+                          {conv.otherUser?.full_name?.charAt(0).toUpperCase() || conv.otherUser?.email?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate text-sm">
+                          {conv.otherUser?.full_name || conv.otherUser?.email || 'Unknown User'}
+                        </p>
+                        <p className={`text-xs truncate ${selectedConversation === conv.id ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {new Date(conv.updated_at).toLocaleString()}
+                        </p>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate text-sm">
-                        {conv.otherUser.full_name || conv.otherUser.email}
-                      </p>
-                      <p className={`text-xs truncate ${selectedConversation === conv.id ? 'text-gray-300' : 'text-gray-600'}`}>
-                        {new Date(conv.updated_at).toLocaleString()}
-                      </p>
                     </div>
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
 
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
-          {selectedConv ? (
+          {selectedConv && selectedConv.otherUser ? (
             <>
               {/* Chat Header */}
               <div className="bg-white border-b-2 border-black px-4 py-4 h-[73px] flex items-center">
                 <div className="flex items-center gap-3">
-                  {selectedConv.otherUser.avatar_url ? (
+                  {selectedConv.otherUser?.avatar_url ? (
                     <img 
                       src={selectedConv.otherUser.avatar_url} 
-                      alt={selectedConv.otherUser.full_name}
+                      alt={selectedConv.otherUser.full_name || 'User'}
                       className="w-12 h-12 rounded-full object-cover border-2 border-black"
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg border-2 border-black">
-                      {selectedConv.otherUser.full_name?.charAt(0).toUpperCase() || selectedConv.otherUser.email?.charAt(0).toUpperCase()}
+                      {selectedConv.otherUser?.full_name?.charAt(0).toUpperCase() || selectedConv.otherUser?.email?.charAt(0).toUpperCase() || 'U'}
                     </div>
                   )}
                   <div>
                     <button
-                      onClick={() => router.push(`/profile/${selectedConv.otherUser.id}`)}
+                      onClick={() => router.push(`/profile/${selectedConv.otherUser?.id}`)}
                       className="font-bold text-xl text-gray-900 hover:underline text-left"
                     >
-                      {selectedConv.otherUser.full_name || selectedConv.otherUser.email}
+                      {selectedConv.otherUser?.full_name || selectedConv.otherUser?.email || 'Unknown User'}
                     </button>
-                    {selectedConv.otherUser.full_name && (
+                    {selectedConv.otherUser?.full_name && (
                       <p className="text-sm text-gray-600">{selectedConv.otherUser.email}</p>
                     )}
                   </div>
