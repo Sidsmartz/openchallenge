@@ -396,6 +396,24 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleDownloadAttachment = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
+    }
+  };
+
   const selectedConv = conversations.find(c => c.id === selectedConversation);
 
   if (!user) {
@@ -566,16 +584,21 @@ export default function ChatPage() {
                                     className="max-w-full rounded border-2 border-black cursor-pointer hover:opacity-90"
                                     onClick={() => window.open(message.attachment_url, '_blank')}
                                   />
-                                  <a
-                                    href={message.attachment_url}
-                                    download
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownloadAttachment(
+                                        message.attachment_url!,
+                                        message.attachment_name || `image-${message.id}.jpg`
+                                      );
+                                    }}
                                     className={`absolute top-2 right-2 p-1.5 rounded ${isOwn ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-700 hover:bg-gray-800'} text-white opacity-0 group-hover:opacity-100 transition-opacity`}
                                     title="Download"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                     </svg>
-                                  </a>
+                                  </button>
                                 </div>
                               ) : (
                                 <div className={`flex items-center justify-between gap-2 p-2 rounded border ${isOwn ? 'border-white/30 hover:bg-blue-700' : 'border-gray-300 hover:bg-gray-50'}`}>
@@ -588,16 +611,18 @@ export default function ChatPage() {
                                     <FileText className="w-5 h-5 flex-shrink-0" />
                                     <span className="text-sm truncate">{message.attachment_name || 'Document'}</span>
                                   </a>
-                                  <a
-                                    href={message.attachment_url}
-                                    download
+                                  <button
+                                    onClick={() => handleDownloadAttachment(
+                                      message.attachment_url!,
+                                      message.attachment_name || `document-${message.id}.pdf`
+                                    )}
                                     className={`p-1 rounded ${isOwn ? 'hover:bg-blue-800' : 'hover:bg-gray-200'} transition-colors`}
                                     title="Download"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                     </svg>
-                                  </a>
+                                  </button>
                                 </div>
                               )}
                             </div>
