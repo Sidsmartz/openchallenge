@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const content = formData.get('content') as string;
     const images = formData.getAll('images') as File[];
+    const tagsString = formData.get('tags') as string;
+    const tags = tagsString ? JSON.parse(tagsString) : [];
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -120,6 +122,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         content,
         image_urls: imageUrls,
+        tags: tags,
         status: postStatus,
         toxicity_scores: moderation.isAvailable ? moderation.scores : null,
       })

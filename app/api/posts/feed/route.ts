@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
+    const searchQuery = searchParams.get('search') || '';
+    const filterTags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
 
     // Get current user (optional for feed viewing)
     const authHeader = request.headers.get('authorization');
@@ -23,8 +25,8 @@ export async function GET(request: NextRequest) {
       user = data.user;
     }
 
-    // Query published posts with user information
-    const { data: posts, error: postsError, count } = await supabase
+    // Build query
+    let query = supabase
       .from('posts')
       .select(`
         *,
@@ -35,7 +37,20 @@ export async function GET(request: NextRequest) {
           avatar_url
         )
       `, { count: 'exact' })
-      .eq('status', 'published')
+      .eq('status', 'published');
+
+    // Apply search filter
+    if (searchQuery) {
+      query = query.ilike('content', `%${searchQuery}%`);
+    }
+
+    // Apply tag filter
+    if (filterTags.length > 0) {
+      query = query.overlaps('tags', filterTags);
+    }
+
+    // Execute query
+    const { data: posts, error: postsError, count } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -68,6 +83,7 @@ export async function GET(request: NextRequest) {
       },
       content: post.content,
       image_urls: post.image_urls || [],
+      tags: post.tags || [],
       likes_count: post.likes_count,
       comments_count: post.comments_count,
       created_at: post.created_at,

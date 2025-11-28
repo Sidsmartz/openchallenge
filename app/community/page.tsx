@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
-import { ArrowLeft, Bell, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Search, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Post {
@@ -12,11 +12,14 @@ interface Post {
   user: { id: string; full_name: string; avatar_url?: string; };
   content: string;
   image_urls: string[];
+  tags: string[];
   likes_count: number;
   comments_count: number;
   created_at: string;
   user_has_liked: boolean;
 }
+
+const AVAILABLE_TAGS = ['Placements', 'General', 'Study Material', 'Doubts', 'College', 'Events', 'Clubs'];
 
 export default function CommunityPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -24,6 +27,7 @@ export default function CommunityPage() {
   const [content, setContent] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [commentingOn, setCommentingOn] = useState<string | null>(null);
@@ -31,6 +35,9 @@ export default function CommunityPage() {
   const [comments, setComments] = useState<{[key: string]: any[]}>({});
   const [loadingComments, setLoadingComments] = useState<{[key: string]: boolean}>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,6 +46,11 @@ export default function CommunityPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    loadPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, filterTags]);
+
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
@@ -46,7 +58,11 @@ export default function CommunityPage() {
 
   const loadPosts = async () => {
     try {
-      const response = await fetch('/api/posts/feed');
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (filterTags.length > 0) params.append('tags', filterTags.join(','));
+      
+      const response = await fetch(`/api/posts/feed?${params.toString()}`);
       const data = await response.json();
       setPosts(data.posts || []);
     } catch (error) {
@@ -82,6 +98,7 @@ export default function CommunityPage() {
 
       const formData = new FormData();
       formData.append('content', content);
+      formData.append('tags', JSON.stringify(selectedTags));
       images.forEach(image => formData.append('images', image));
 
       const response = await fetch('/api/posts/create', {
@@ -104,6 +121,8 @@ export default function CommunityPage() {
         setContent('');
         setImages([]);
         setImagePreviews([]);
+        setSelectedTags([]);
+        setShowCreateModal(false);
         loadPosts();
       } else {
         toast.error('Failed to create post', {
@@ -226,7 +245,7 @@ export default function CommunityPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#9DC4AA] flex">
+      <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
         <div className="flex-1 ml-48 flex items-center justify-center">
@@ -240,7 +259,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#9DC4AA] flex">
+    <div className="min-h-screen bg-[#F5F1E8] flex">
       <Sidebar />
       <Toaster position="top-right" richColors />
       
@@ -271,9 +290,6 @@ export default function CommunityPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <button className="p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors">
-                  <Bell className="w-5 h-5" />
-                </button>
                 {user.user_metadata?.avatar_url ? (
                   <img 
                     src={user.user_metadata.avatar_url} 
@@ -291,9 +307,60 @@ export default function CommunityPage() {
             {/* Community Title and Filter */}
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold text-gray-900">Community</h1>
-              <button className="px-4 py-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors">
-                Filter
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowFilterMenu(!showFilterMenu)}
+                  className="px-4 py-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filter
+                  {filterTags.length > 0 && (
+                    <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {filterTags.length}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Filter Dropdown */}
+                {showFilterMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white border-2 border-black rounded-lg shadow-lg p-4 z-10">
+                    <h3 className="font-bold mb-3">Filter by Tags</h3>
+                    <div className="space-y-2">
+                      {AVAILABLE_TAGS.map(tag => (
+                        <label key={tag} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={filterTags.includes(tag)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFilterTags([...filterTags, tag]);
+                              } else {
+                                setFilterTags(filterTags.filter(t => t !== tag));
+                              }
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">{tag}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={() => setFilterTags([])}
+                        className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={() => setShowFilterMenu(false)}
+                        className="flex-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -371,6 +438,17 @@ export default function CommunityPage() {
 
                   {/* Content */}
                   <p className="mb-4 text-gray-900 whitespace-pre-wrap">{post.content}</p>
+
+                  {/* Tags */}
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {post.tags.map((tag, i) => (
+                        <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full border border-blue-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Images */}
                   {post.image_urls.length > 0 && (
@@ -469,6 +547,99 @@ export default function CommunityPage() {
             )}
           </div>
         </div>
+
+        {/* Floating Create Post Button */}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="fixed bottom-8 right-8 w-16 h-16 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-3xl"
+        >
+          +
+        </button>
+
+        {/* Create Post Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-gray-200 bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#F5F1E8] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 border-4 border-black">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Create a Post</h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="What's on your mind?"
+                  className="w-full h-32 px-4 py-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  maxLength={5000}
+                />
+
+                {/* Tags Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags (Optional)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_TAGS.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (selectedTags.includes(tag)) {
+                            setSelectedTags(selectedTags.filter(t => t !== tag));
+                          } else {
+                            setSelectedTags([...selectedTags, tag]);
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-full text-sm border-2 transition-colors ${
+                          selectedTags.includes(tag)
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-blue-600'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Images (Optional)
+                  </label>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    multiple 
+                    onChange={handleImageChange}
+                    className="text-sm text-gray-600"
+                  />
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      {imagePreviews.map((preview, i) => (
+                        <img key={i} src={preview} alt="" className="w-full h-32 object-cover rounded-lg border-2 border-gray-300" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full px-6 py-3 bg-black text-white font-medium rounded-lg hover:bg-gray-800 disabled:bg-gray-400 transition-colors"
+                >
+                  {submitting ? 'Posting...' : 'Post'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
