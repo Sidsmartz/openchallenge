@@ -1,9 +1,10 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, BookOpen, Users, LogOut } from 'lucide-react';
+import { Home, BookOpen, Users, LogOut, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 
 interface SidebarProps {
   userRole?: 'student' | 'alumni' | 'faculty' | 'admin';
@@ -12,6 +13,26 @@ interface SidebarProps {
 export default function Sidebar({ userRole = 'student' }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/check', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      const data = await response.json();
+      setIsAdmin(data.isAdmin);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -30,6 +51,11 @@ export default function Sidebar({ userRole = 'student' }: SidebarProps) {
     { name: 'Learning Hub', icon: BookOpen, path: '/hub', roles: ['student', 'alumni', 'faculty', 'admin'] },
     { name: 'Community', icon: Users, path: '/community', roles: ['student', 'alumni', 'faculty', 'admin'] },
   ];
+
+  // Add admin link if user is admin
+  if (isAdmin) {
+    navItems.push({ name: 'Admin', icon: Shield, path: '/admin', roles: ['admin'] });
+  }
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(userRole));
 

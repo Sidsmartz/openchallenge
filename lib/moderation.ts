@@ -11,6 +11,7 @@ interface ModerationResult {
   scores: ToxicityScores;
   shouldFlag: boolean;
   isAvailable: boolean;
+  flaggedReason?: string;
 }
 
 const TOXICITY_THRESHOLD = 0.7;
@@ -45,10 +46,21 @@ export async function analyzeContent(text: string, baseUrl?: string): Promise<Mo
       (score) => score > TOXICITY_THRESHOLD
     );
 
+    // Generate flagged reason if content should be flagged
+    let flaggedReason = '';
+    if (shouldFlag) {
+      const flaggedCategories = Object.entries(scores)
+        .filter(([_, score]) => score > TOXICITY_THRESHOLD)
+        .map(([category, score]) => `${category} (${(score * 100).toFixed(0)}%)`)
+        .join(', ');
+      flaggedReason = `Flagged for: ${flaggedCategories}`;
+    }
+
     return {
       scores,
       shouldFlag,
       isAvailable: true,
+      flaggedReason,
     };
   } catch (error) {
     console.error('Error analyzing content:', error);

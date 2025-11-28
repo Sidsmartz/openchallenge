@@ -317,9 +317,12 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div>
-                    <p className="font-bold text-lg text-gray-900">
+                    <button
+                      onClick={() => router.push(`/profile/${selectedConv.otherUser.id}`)}
+                      className="font-bold text-lg text-gray-900 hover:underline text-left"
+                    >
                       {selectedConv.otherUser.full_name || selectedConv.otherUser.email}
-                    </p>
+                    </button>
                     {selectedConv.otherUser.full_name && (
                       <p className="text-sm text-gray-600">{selectedConv.otherUser.email}</p>
                     )}

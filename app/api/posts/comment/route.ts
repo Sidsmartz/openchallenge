@@ -21,6 +21,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if user is banned
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('is_banned')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || userData?.is_banned) {
+      return NextResponse.json(
+        { error: 'You have been banned from commenting' },
+        { status: 403 }
+      );
+    }
+
     const { postId, content } = await request.json();
 
     if (!postId || !content?.trim()) {
@@ -47,6 +61,7 @@ export async function POST(request: NextRequest) {
         content,
         status: commentStatus,
         toxicity_scores: moderation.isAvailable ? moderation.scores : null,
+        flagged_reason: moderation.shouldFlag ? moderation.flaggedReason : null,
       })
       .select()
       .single();
