@@ -92,10 +92,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { conversationId, content } = await request.json();
+    const { conversationId, content, attachmentUrl, attachmentType, attachmentName } = await request.json();
 
-    if (!conversationId || !content?.trim()) {
-      return NextResponse.json({ error: 'Conversation ID and content are required' }, { status: 400 });
+    if (!conversationId || (!content?.trim() && !attachmentUrl)) {
+      return NextResponse.json({ error: 'Conversation ID and content or attachment are required' }, { status: 400 });
+    }
+
+    // Check if user is banned from chat
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('is_chat_banned, chat_ban_reason')
+      .eq('id', user.id)
+      .single();
+
+    if (userError) {
+      console.error('Error checking user ban status:', userError);
+    }
+
+    if (userData?.is_chat_banned) {
+      return NextResponse.json({ 
+        error: 'You have been banned from chat',
+        reason: userData.chat_ban_reason || 'Your account has been restricted from using chat features.',
+        isChatBanned: true
+      }, { status: 403 });
     }
 
     // Create message
@@ -104,7 +123,10 @@ export async function POST(request: NextRequest) {
       .insert({
         conversation_id: conversationId,
         sender_id: user.id,
-        content: content.trim(),
+        content: content?.trim() || '',
+        attachment_url: attachmentUrl || null,
+        attachment_type: attachmentType || null,
+        attachment_name: attachmentName || null,
       })
       .select()
       .single();

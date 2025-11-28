@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { Shield, TrendingUp, Users, MessageSquare, AlertTriangle, CheckCircle, XCircle, Ban, Search } from 'lucide-react';
+import { Shield, TrendingUp, Users, MessageSquare, AlertTriangle, CheckCircle, XCircle, Ban, Search, Flag, UserX } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface FlaggedPost {
@@ -49,7 +49,8 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'moderation' | 'statistics'>('moderation');
+  const [activeTab, setActiveTab] = useState<'moderation' | 'statistics' | 'chat-reports'>('moderation');
+  const [chatReports, setChatReports] = useState<any[]>([]);
   const [flaggedPosts, setFlaggedPosts] = useState<FlaggedPost[]>([]);
   const [flaggedComments, setFlaggedComments] = useState<FlaggedComment[]>([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
@@ -68,6 +69,7 @@ export default function AdminPage() {
       loadBannedUsers();
       loadAllUsers();
       loadStatistics();
+      loadChatReports();
     }
   }, [isAdmin]);
 
@@ -185,6 +187,48 @@ export default function AdminPage() {
       setStats(data);
     } catch (error) {
       console.error('Error loading statistics:', error);
+    }
+  };
+
+  const loadChatReports = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/chat-reports', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      const data = await response.json();
+      setChatReports(data.reports || []);
+    } catch (error) {
+      console.error('Error loading chat reports:', error);
+    }
+  };
+
+  const handleChatReportAction = async (reportId: string, action: 'ban_chat' | 'ban_all' | 'dismiss', notes?: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`/api/admin/chat-reports/${reportId}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action, notes }),
+      });
+
+      if (response.ok) {
+        toast.success(`Action completed: ${action.replace('_', ' ')}`);
+        loadChatReports();
+        loadBannedUsers();
+      } else {
+        toast.error('Failed to process action');
+      }
+    } catch (error) {
+      console.error('Error processing chat report action:', error);
+      toast.error('Failed to process action');
     }
   };
 
@@ -337,6 +381,19 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   Moderation
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('chat-reports')}
+                className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                  activeTab === 'chat-reports'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Flag className="w-4 h-4" />
+                  Chat Reports ({chatReports.length})
                 </div>
               </button>
               <button
@@ -588,7 +645,7 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'statistics' ? (
             <div className="space-y-4">
               {/* Statistics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -696,7 +753,84 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : activeTab === 'chat-reports' ? (
+            <div className="space-y-4">
+              {/* Chat Reports */}
+              <div className="bg-white border-2 border-black rounded-lg p-4">
+                <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  <Flag className="w-5 h-5" />
+                  Chat Reports ({chatReports.length})
+                </h2>
+                <div className="space-y-3">
+                  {chatReports.length === 0 ? (
+                    <p className="text-gray-600 text-sm text-center py-4">No chat reports</p>
+                  ) : (
+                    chatReports.map((report) => (
+                      <div key={report.id} className="border-2 border-black rounded-lg p-4 bg-orange-50">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`px-2 py-1 text-xs rounded font-bold ${
+                                report.status === 'pending' ? 'bg-yellow-200 text-yellow-800' :
+                                report.status === 'reviewed' ? 'bg-blue-200 text-blue-800' :
+                                report.status === 'action_taken' ? 'bg-green-200 text-green-800' :
+                                'bg-gray-200 text-gray-800'
+                              }`}>
+                                {report.status.toUpperCase()}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(report.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900 mb-1">
+                              Reporter: {report.reporter?.full_name || report.reporter?.email}
+                            </p>
+                            <p className="text-sm font-semibold text-red-700 mb-1">
+                              Reported User: {report.reported_user?.full_name || report.reported_user?.email}
+                            </p>
+                            <p className="text-sm text-gray-700 mb-2">
+                              <strong>Reason:</strong> {report.reason}
+                            </p>
+                            {report.admin_notes && (
+                              <p className="text-xs text-gray-600 italic">
+                                <strong>Admin Notes:</strong> {report.admin_notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {report.status === 'pending' && (
+                          <div className="flex gap-2 mt-3 pt-3 border-t border-gray-300">
+                            <button
+                              onClick={() => handleChatReportAction(report.id, 'ban_chat', 'User banned from chat')}
+                              className="flex-1 px-3 py-2 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <UserX className="w-3.5 h-3.5" />
+                              Ban from Chat
+                            </button>
+                            <button
+                              onClick={() => handleChatReportAction(report.id, 'ban_all', 'User banned from all features')}
+                              className="flex-1 px-3 py-2 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              Ban from All
+                            </button>
+                            <button
+                              onClick={() => handleChatReportAction(report.id, 'dismiss', 'Report dismissed - no action needed')}
+                              className="flex-1 px-3 py-2 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              Dismiss
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
