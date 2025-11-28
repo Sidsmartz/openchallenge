@@ -27,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${spaceMono.variable} ${roboto.variable} antialiased`}>
+
         {children}
       </body>
     </html>
