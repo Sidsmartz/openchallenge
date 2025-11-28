@@ -9,9 +9,20 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@types/mime-types": "^3.0.1",
+    "@types/video.js": "^7.3.58",
+    "@videojs/themes": "^1.0.1",
+    "formidable": "^3.5.4",
+    "html-to-image": "^1.11.13",
+    "mime-types": "^3.0.2",
     "next": "16.0.5",
+    "openai": "^6.9.1",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "reactflow": "^11.11.4",
+    "uuid": "^13.0.0",
+    "video.js": "^8.23.4",
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
