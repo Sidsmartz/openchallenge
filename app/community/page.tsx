@@ -317,11 +317,11 @@ export default function CommunityPage() {
       <Toaster position="top-right" richColors />
       
       {/* Main Content */}
-      <div className="flex-1 ml-48 mr-80 p-8">
-        <div className="max-w-full mx-auto">
+      <div className="flex-1 ml-48 mr-72 p-4">
+        <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="bg-[#F5F1E8] rounded-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white border-2 border-black rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3 mb-3">
               <button 
                 onClick={() => router.back()}
                 className="p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors"
@@ -329,41 +329,39 @@ export default function CommunityPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               
-              <div className="flex-1 mx-6">
+              <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="text"
-                    placeholder="Search Anything"
+                    placeholder="Search posts..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border-2 border-black rounded bg-white"
+                    className="w-full pl-9 pr-3 py-2 border-2 border-black rounded bg-white text-sm"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                {user.user_metadata?.avatar_url ? (
-                  <img 
-                    src={user.user_metadata.avatar_url} 
-                    alt="Profile"
-                    className="w-10 h-10 rounded border-2 border-black object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold">
-                    {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                )}
-              </div>
+              {user.user_metadata?.avatar_url ? (
+                <img 
+                  src={user.user_metadata.avatar_url} 
+                  alt="Profile"
+                  className="w-9 h-9 rounded-full border-2 border-black object-cover"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                  {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
             </div>
 
             {/* Community Title and Filter */}
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-gray-900">Community</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Community</h1>
               <div className="relative">
                 <button 
                   onClick={() => setShowFilterMenu(!showFilterMenu)}
-                  className="px-4 py-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex items-center gap-2"
+                  className="px-3 py-1.5 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex items-center gap-2 text-sm"
                 >
                   <Filter className="w-4 h-4" />
                   Filter
@@ -376,9 +374,9 @@ export default function CommunityPage() {
                 
                 {/* Filter Dropdown */}
                 {showFilterMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border-2 border-black rounded-lg shadow-lg p-4 z-10">
-                    <h3 className="font-bold mb-3">Filter by Tags</h3>
-                    <div className="space-y-2">
+                  <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-black rounded-lg shadow-lg p-3 z-10">
+                    <h3 className="font-bold mb-2 text-sm">Filter by Tags</h3>
+                    <div className="space-y-1.5">
                       {AVAILABLE_TAGS.map(tag => (
                         <label key={tag} className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -397,16 +395,16 @@ export default function CommunityPage() {
                         </label>
                       ))}
                     </div>
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => setFilterTags([])}
-                        className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100"
+                        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
                       >
                         Clear
                       </button>
                       <button
                         onClick={() => setShowFilterMenu(false)}
-                        className="flex-1 px-3 py-1 text-sm bg-black text-white rounded hover:bg-gray-800"
+                        className="flex-1 px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
                       >
                         Apply
                       </button>
@@ -417,86 +415,48 @@ export default function CommunityPage() {
             </div>
           </div>
 
-          {/* Top Posts Section */}
-          <div className="bg-white border-4 border-black rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-bold mb-4">Top Posts This Week</h2>
-            <div className="space-y-4">
-              {loading ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600">Loading posts...</p>
-                </div>
-              ) : posts.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600">No posts yet. Be the first to post!</p>
-                </div>
-              ) : (
-                posts.slice(0, 3).map((post) => (
-                  <div key={post.id} className="bg-gray-200 rounded p-4 min-h-[80px]">
-                    <div className="flex items-start gap-3">
-                      {post.user.avatar_url ? (
-                        <img 
-                          src={post.user.avatar_url} 
-                          alt={post.user.full_name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                          {post.user.full_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{post.user.full_name}</p>
-                        <p className="text-sm text-gray-700 line-clamp-2">{post.content}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
           {/* All Posts Feed */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {loading ? (
-              <div className="text-center py-12">
-                <p className="text-gray-700">Loading posts...</p>
+              <div className="text-center py-8">
+                <p className="text-gray-700 text-sm">Loading posts...</p>
               </div>
             ) : posts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-700">No posts yet. Be the first to post!</p>
+              <div className="text-center py-8">
+                <p className="text-gray-700 text-sm">No posts yet. Be the first to post!</p>
               </div>
             ) : (
               posts.map((post) => (
-                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-6">
+                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4">
                   {/* User Info */}
-                  <div className="flex items-center mb-4">
+                  <div className="flex items-center mb-3">
                     {post.user.avatar_url ? (
                       <img 
                         src={post.user.avatar_url} 
                         alt={post.user.full_name}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-black"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-black"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg border-2 border-black">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black">
                         {post.user.full_name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div className="ml-3">
-                      <p className="font-semibold text-gray-900">{post.user.full_name}</p>
-                      <p className="text-sm text-gray-600">
-                        {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString()}
+                      <p className="font-semibold text-gray-900 text-sm">{post.user.full_name}</p>
+                      <p className="text-xs text-gray-600">
+                        {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
 
                   {/* Content */}
-                  <p className="mb-4 text-gray-900 whitespace-pre-wrap">{post.content}</p>
+                  <p className="mb-3 text-gray-900 whitespace-pre-wrap text-sm">{post.content}</p>
 
                   {/* Tags */}
                   {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="flex flex-wrap gap-1.5 mb-3">
                       {post.tags.map((tag, i) => (
-                        <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full border border-blue-300">
+                        <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full border border-blue-300">
                           {tag}
                         </span>
                       ))}
@@ -505,27 +465,27 @@ export default function CommunityPage() {
 
                   {/* Images */}
                   {post.image_urls.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                       {post.image_urls.map((url, i) => (
-                        <img key={i} src={url} alt="" className="w-full h-64 object-cover rounded border-2 border-black cursor-pointer hover:opacity-90" onClick={() => window.open(url, '_blank')} />
+                        <img key={i} src={url} alt="" className="w-full h-48 object-cover rounded border-2 border-black cursor-pointer hover:opacity-90" onClick={() => window.open(url, '_blank')} />
                       ))}
                     </div>
                   )}
 
                   {/* Actions */}
-                  <div className="flex items-center gap-6 pt-4 border-t-2 border-gray-300">
+                  <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
                     <button
                       onClick={() => handleLike(post.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded border-2 border-black transition-colors ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 border-black transition-colors text-sm ${
                         post.user_has_liked
                           ? 'bg-red-100 text-red-600'
                           : 'bg-white text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      <svg className="w-5 h-5" fill={post.user_has_liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill={post.user_has_liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                       </svg>
-                      <span className="font-medium">{post.likes_count} {post.likes_count === 1 ? 'Like' : 'Likes'}</span>
+                      <span className="font-medium">{post.likes_count}</span>
                     </button>
 
                     <button
@@ -536,31 +496,31 @@ export default function CommunityPage() {
                           loadComments(post.id);
                         }
                       }}
-                      className="flex items-center gap-2 px-4 py-2 rounded border-2 border-black bg-white text-gray-700 hover:bg-gray-100 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded border-2 border-black bg-white text-gray-700 hover:bg-gray-100 transition-colors text-sm"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
-                      <span className="font-medium">{post.comments_count} {post.comments_count === 1 ? 'Comment' : 'Comments'}</span>
+                      <span className="font-medium">{post.comments_count}</span>
                     </button>
                   </div>
 
                   {/* Comments Section */}
                   {commentingOn === post.id && (
-                    <div className="mt-4 pt-4 border-t-2 border-gray-300 space-y-4">
+                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
                       {/* Comment Input */}
-                      <div className="flex gap-3">
+                      <div className="flex gap-2">
                         <input
                           type="text"
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
                           placeholder="Write a comment..."
-                          className="flex-1 px-4 py-2 border-2 border-black rounded bg-white text-gray-900"
+                          className="flex-1 px-3 py-2 border-2 border-black rounded bg-white text-gray-900 text-sm"
                         />
                         <button
                           onClick={() => handleComment(post.id)}
-                          className="px-6 py-2 bg-black text-white font-medium rounded hover:bg-gray-800 transition-colors"
+                          className="px-4 py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
                         >
                           Post
                         </button>
@@ -568,22 +528,22 @@ export default function CommunityPage() {
 
                       {/* Comments List */}
                       {loadingComments[post.id] ? (
-                        <p className="text-sm text-gray-600">Loading comments...</p>
+                        <p className="text-xs text-gray-600">Loading comments...</p>
                       ) : comments[post.id]?.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {comments[post.id].map((comment: any) => (
-                            <div key={comment.id} className="flex gap-3 bg-gray-100 p-3 rounded border border-gray-300">
+                            <div key={comment.id} className="flex gap-2 bg-gray-50 p-2 rounded border border-gray-200">
                               {comment.user.avatar_url ? (
-                                <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-8 h-8 rounded-full object-cover border-2 border-black" />
+                                <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-7 h-7 rounded-full object-cover border-2 border-black" />
                               ) : (
-                                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold border-2 border-black">
+                                <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold border-2 border-black">
                                   {comment.user.full_name.charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-gray-900">{comment.user.full_name}</p>
-                                <p className="text-sm text-gray-700">{comment.content}</p>
-                                <p className="text-xs text-gray-500 mt-1">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-gray-900">{comment.user.full_name}</p>
+                                <p className="text-xs text-gray-700">{comment.content}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
                                   {new Date(comment.created_at).toLocaleString()}
                                 </p>
                               </div>
@@ -591,7 +551,7 @@ export default function CommunityPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-600">No comments yet. Be the first to comment!</p>
+                        <p className="text-xs text-gray-600">No comments yet. Be the first to comment!</p>
                       )}
                     </div>
                   )}
@@ -601,74 +561,119 @@ export default function CommunityPage() {
           </div>
         </div>
 
-        {/* Right Sidebar - Users List */}
-        <div className="fixed right-0 top-0 h-screen w-80 bg-[#F5F1E8] border-l-4 border-black p-6 overflow-y-auto">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">People</h2>
-          
-          {/* User Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search people..."
-              value={userSearchQuery}
-              onChange={(e) => setUserSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border-2 border-black rounded bg-white"
-            />
+        {/* Right Sidebar */}
+        <div className="fixed right-0 top-0 h-screen w-72 bg-white border-l-2 border-black overflow-y-auto">
+          {/* Top Posts Section - Fixed at top */}
+          <div className="p-4 border-b-2 border-black bg-[#F5F1E8]">
+            <h2 className="text-lg font-bold mb-3 text-gray-900">Top Posts This Week</h2>
+            <div className="space-y-2">
+              {loading ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 text-xs">Loading...</p>
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 text-xs">No posts yet</p>
+                </div>
+              ) : (
+                posts.slice(0, 3).map((post) => (
+                  <div key={post.id} className="bg-white border-2 border-black rounded p-2 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <div className="flex items-start gap-2">
+                      {post.user.avatar_url ? (
+                        <img 
+                          src={post.user.avatar_url} 
+                          alt={post.user.full_name}
+                          className="w-8 h-8 rounded-full border-2 border-black object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                          {post.user.full_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-xs">{post.user.full_name}</p>
+                        <p className="text-xs text-gray-700 line-clamp-2">{post.content}</p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                          <span>❤️ {post.likes_count}</span>
+                          <span>💬 {post.comments_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          {/* Users List */}
-          <div className="space-y-3">
-            {users.map((user) => (
-              <div key={user.id} className="bg-white border-2 border-black rounded-lg p-3">
-                <div className="flex items-center gap-3 mb-2">
-                  {user.avatar_url ? (
-                    <img 
-                      src={user.avatar_url} 
-                      alt={user.full_name}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-black"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black">
-                      {user.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">
-                      {user.full_name || user.email}
-                    </p>
-                    {user.full_name && (
-                      <p className="text-xs text-gray-600 truncate">{user.email}</p>
+          {/* People Section - Scrollable */}
+          <div className="p-4">
+            <h2 className="text-lg font-bold mb-3 text-gray-900">People</h2>
+            
+            {/* User Search */}
+            <div className="relative mb-3">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search people..."
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 border-2 border-black rounded bg-white text-sm"
+              />
+            </div>
+
+            {/* Users List */}
+            <div className="space-y-2">
+              {users.map((user) => (
+                <div key={user.id} className="bg-white border-2 border-black rounded-lg p-2.5">
+                  <div className="flex items-center gap-2 mb-2">
+                    {user.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt={user.full_name}
+                        className="w-9 h-9 rounded-full object-cover border-2 border-black"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold border-2 border-black">
+                        {user.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                      </div>
                     )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate text-sm">
+                        {user.full_name || user.email}
+                      </p>
+                      {user.full_name && (
+                        <p className="text-xs text-gray-600 truncate">{user.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleStartChat(user.id)}
+                      className="flex-1 px-2 py-1.5 bg-black text-white text-xs rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Chat
+                    </button>
+                    <button
+                      className="px-2 py-1.5 border-2 border-black text-black text-xs rounded hover:bg-gray-100 transition-colors"
+                      title="View Profile"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleStartChat(user.id)}
-                    className="flex-1 px-3 py-1.5 bg-black text-white text-sm rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Chat
-                  </button>
-                  <button
-                    className="px-3 py-1.5 border-2 border-black text-black text-sm rounded hover:bg-gray-100 transition-colors"
-                    title="View Profile"
-                  >
-                    <User className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {users.length === 0 && (
-              <p className="text-center text-gray-600 py-8">No users found</p>
-            )}
+              ))}
+              {users.length === 0 && (
+                <p className="text-center text-gray-600 py-6 text-sm">No users found</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Floating Create Post Button */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-8 right-[22rem] w-16 h-16 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-3xl z-10"
+          className="fixed bottom-6 right-[19rem] w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-2xl z-10"
         >
           +
         </button>
