@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Sidebar from "@/components/Sidebar";
-import { Search, Bell, ArrowLeft, Play } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
+import { Search, ArrowLeft, Play } from "lucide-react";
 
 interface LastWatchedVideo {
   id: string;
@@ -39,7 +40,7 @@ export default function Home() {
   const checkAccess = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+
       if (!authUser) {
         router.push('/login');
         return;
@@ -60,14 +61,14 @@ export default function Home() {
       });
 
       const data = await response.json();
-      
+
       if (!data.hasAccess) {
         router.push('/restricted');
         return;
       }
 
       setChecking(false);
-      
+
       // Fetch last watched video and top posts
       await Promise.all([
         fetchLastWatchedVideo(),
@@ -81,9 +82,9 @@ export default function Home() {
 
   const fetchTopPosts = async () => {
     try {
-      const response = await fetch('/api/posts/feed');
+      const response = await fetch('/api/posts/top-weekly');
       const data = await response.json();
-      setTopPosts((data.posts || []).slice(0, 5));
+      setTopPosts(data.posts || []);
     } catch (error) {
       console.error('Error fetching top posts:', error);
     } finally {
@@ -141,7 +142,7 @@ export default function Home() {
             <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            
+
             <div className="flex-1 mx-6 relative">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-500" />
@@ -154,26 +155,18 @@ export default function Home() {
             </div>
 
             <div className="flex gap-3">
-              <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
-                <Bell className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => router.push(`/profile/${user?.id}`)}
-                className="hover:opacity-80 transition-opacity"
-                title="View your profile"
-              >
-                {user?.user_metadata?.avatar_url ? (
-                  <img
-                    src={user.user_metadata.avatar_url}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-full border-2 border-black object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-full flex items-center justify-center text-white font-bold">
-                    {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                )}
-              </button>
+              <NotificationBell />
+              {user?.user_metadata?.avatar_url ? (
+                <img
+                  src={user.user_metadata.avatar_url}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full border-2 border-black object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-full flex items-center justify-center text-white font-bold">
+                  {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -183,7 +176,7 @@ export default function Home() {
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-[#FFF7E4] border-2 border-black p-6 shadow-[8px_8px_0px_#000]">
                 <h2 className="text-3xl font-black uppercase tracking-tight mb-6">Jump back in</h2>
-                
+
                 {lastWatchedVideo ? (
                   /* Video Card */
                   <button
@@ -228,7 +221,7 @@ export default function Home() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Continue Watching */}
                       <div className="w-1/3 bg-[#F4C430] flex items-center justify-center p-6">
                         <div className="text-center">
