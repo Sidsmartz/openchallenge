@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Edit, Plus, X, Briefcase, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Edit, Plus, X, Briefcase, Link as LinkIcon, Check } from 'lucide-react';
 
 interface WorkExperience {
   id: string;
@@ -119,7 +119,7 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     try {
       // Skills is an ARRAY type in database
-      const skillsArray = typeof editedProfile.skills === 'string' 
+      const skillsArray = typeof editedProfile.skills === 'string'
         ? editedProfile.skills.split(',').map(s => s.trim()).filter(Boolean)
         : (Array.isArray(editedProfile.skills) ? editedProfile.skills : []);
 
@@ -323,25 +323,43 @@ export default function ProfilePage() {
                   <div className="w-full mb-6 px-2">
                     <div className="flex justify-between items-end mb-2">
                       <div className="text-center">
-                        <span className="block text-2xl font-black">{profileUser.xp || 0}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">XP</span>
+                        <span className="block text-2xl font-black">
+                          {profileUser.xp || 0}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                          XP
+                        </span>
                       </div>
+
                       <div className="text-center">
-                        <span className="block text-2xl font-black">Lvl {Math.floor((profileUser.xp || 0) / 100) + 1}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Level</span>
+                        <span className="block text-2xl font-black">
+                          Lvl {Math.floor((profileUser.xp || 0) / 100) + 1}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                          Level
+                        </span>
                       </div>
                     </div>
-                    <div className="h-3 border-2 border-black bg-white rounded-full overflow-hidden relative">
+
+                    {/* Stylish XP Bar */}
+                    <div className="relative h-4 bg-white border-2 border-black rounded-full shadow-[2px_2px_0px_#000] overflow-hidden">
                       <div
-                        className="h-full bg-green-500 border-r-2 border-black transition-all duration-500"
-                        style={{ width: `${((profileUser.xp || 0) % 100)}%` }}
+                        className="h-full rounded-full bg-gradient-to-r from-red-500 via-red-400 to-red-600 transition-all duration-500 shadow-[inset_0_0_6px_rgba(0,0,0,0.5)]"
+                        style={{
+                          width: `${((profileUser.xp || 0) % 100)}%`,
+                        }}
                       />
-                      <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,#000_5px,#000_10px)]" />
+
+                      {/* Metallic grid highlight */}
+                      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,#000_6px,#000_12px)]" />
                     </div>
-                    <p className="text-center text-[10px] font-bold mt-1 text-gray-600">
+
+                    <p className="text-center text-[11px] font-bold mt-1 text-gray-700">
                       {100 - ((profileUser.xp || 0) % 100)} XP to next level
                     </p>
                   </div>
+
+
 
                   {/* Socials */}
                   {socials.length > 0 && (
@@ -364,13 +382,24 @@ export default function ProfilePage() {
                   {/* Action Buttons */}
                   <div className="w-full space-y-2">
                     {isOwnProfile ? (
-                      <button
-                        onClick={() => setIsEditing(!isEditing)}
-                        className="w-full px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        {isEditing ? 'Cancel Edit' : 'Edit Profile'}
-                      </button>
+                      <>
+                        {isEditing && (
+                          <button
+                            onClick={handleSaveProfile}
+                            className="w-full px-4 py-2 bg-[#A8D7B7] border-2 border-black font-bold shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all flex items-center justify-center gap-2 mb-2"
+                          >
+                            <Check className="w-5 h-5" />
+                            Save Changes
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setIsEditing(!isEditing)}
+                          className={`w-full px-4 py-2 rounded border-2 border-black font-bold shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all flex items-center justify-center gap-2 ${isEditing ? 'bg-white hover:bg-gray-50' : 'bg-black text-white hover:bg-gray-800'}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                          {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+                        </button>
+                      </>
                     ) : (
                       <button
                         onClick={handleStartChat}
@@ -452,14 +481,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {isEditing && (
-                <button
-                  onClick={handleSaveProfile}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                >
-                  Save Changes
-                </button>
-              )}
+
             </div>
 
             {/* Right Column - Work Experience & Socials */}
