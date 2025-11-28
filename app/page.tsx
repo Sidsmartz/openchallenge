@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Sidebar from "@/components/Sidebar";
-import { Search, Bell, ArrowLeft, Play } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
+import { Search, ArrowLeft, Play } from "lucide-react";
 
 interface LastWatchedVideo {
   id: string;
@@ -154,9 +155,7 @@ export default function Home() {
             </div>
 
             <div className="flex gap-3">
-              <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
-                <Bell className="w-5 h-5" />
-              </button>
+              <NotificationBell />
               {user?.user_metadata?.avatar_url ? (
                 <img
                   src={user.user_metadata.avatar_url}
