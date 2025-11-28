@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
+import Sidebar from '@/components/Sidebar';
 
 interface Subtitle {
   start: number;
@@ -307,11 +308,13 @@ export default function VideoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-          Video Player with Whisper Subtitles
-        </h1>
+    <div className="min-h-screen bg-[#9DC4AA] flex">
+      <Sidebar />
+      <div className="flex-1 ml-48 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+            Video Player with Whisper Subtitles
+          </h1>
 
         {/* File Upload / YouTube */}
         {!videoUrl && (
@@ -704,6 +707,7 @@ export default function VideoPage() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

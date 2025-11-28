@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
+import Sidebar from '@/components/Sidebar';
+import { ArrowLeft, Bell, Search, Filter } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Post {
   id: string;
@@ -27,6 +30,8 @@ export default function CommunityPage() {
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<{[key: string]: any[]}>({});
   const [loadingComments, setLoadingComments] = useState<{[key: string]: boolean}>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     checkUser();
@@ -221,194 +226,248 @@ export default function CommunityPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black py-12 px-4">
+      <div className="min-h-screen bg-[#9DC4AA] flex">
+        <Sidebar />
         <Toaster position="top-right" />
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Community</h1>
-          <p className="text-gray-600 dark:text-gray-400">Please log in to view and create posts</p>
+        <div className="flex-1 ml-48 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-4 text-gray-900">Community</h1>
+            <p className="text-gray-700">Please log in to view and create posts</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
+    <div className="min-h-screen bg-[#9DC4AA] flex">
+      <Sidebar />
       <Toaster position="top-right" richColors />
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Community</h1>
-
-        {/* Post Creation */}
-        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Create a Post</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="What's on your mind?"
-              className="w-full h-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                       bg-white dark:bg-zinc-800 text-gray-900 dark:text-white resize-none
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={5000}
-            />
-            <input 
-              type="file" 
-              accept="image/*" 
-              multiple 
-              onChange={handleImageChange}
-              className="text-sm text-gray-600 dark:text-gray-400"
-            />
-            {imagePreviews.length > 0 && (
-              <div className="grid grid-cols-3 gap-4">
-                {imagePreviews.map((preview, i) => (
-                  <img key={i} src={preview} alt="" className="w-full h-32 object-cover rounded-lg" />
-                ))}
+      
+      {/* Main Content */}
+      <div className="flex-1 ml-48 p-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="bg-[#F5F1E8] rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <button 
+                onClick={() => router.back()}
+                className="p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              
+              <div className="flex-1 mx-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search Anything"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border-2 border-black rounded bg-white"
+                  />
+                </div>
               </div>
-            )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 
-                       text-white font-medium rounded-lg transition-colors"
-            >
-              {submitting ? 'Posting...' : 'Post'}
-            </button>
-          </form>
-        </div>
 
-        {/* Posts Feed */}
-        <div className="space-y-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">Loading posts...</p>
+              <div className="flex items-center gap-3">
+                <button className="p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors">
+                  <Bell className="w-5 h-5" />
+                </button>
+                {user.user_metadata?.avatar_url ? (
+                  <img 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Profile"
+                    className="w-10 h-10 rounded border-2 border-black object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold">
+                    {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">No posts yet. Be the first to post!</p>
+
+            {/* Community Title and Filter */}
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold text-gray-900">Community</h1>
+              <button className="px-4 py-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors">
+                Filter
+              </button>
             </div>
-          ) : (
-            posts.map((post) => (
-              <div key={post.id} className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6">
-                {/* User Info */}
-                <div className="flex items-center mb-4">
-                  {post.user.avatar_url ? (
-                    <img 
-                      src={post.user.avatar_url} 
-                      alt={post.user.full_name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                      {post.user.full_name.charAt(0).toUpperCase()}
+          </div>
+
+          {/* Top Posts Section */}
+          <div className="bg-white border-4 border-black rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-bold mb-4">Top Posts This Week</h2>
+            <div className="space-y-4">
+              {loading ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Loading posts...</p>
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">No posts yet. Be the first to post!</p>
+                </div>
+              ) : (
+                posts.slice(0, 3).map((post) => (
+                  <div key={post.id} className="bg-gray-200 rounded p-4 min-h-[80px]">
+                    <div className="flex items-start gap-3">
+                      {post.user.avatar_url ? (
+                        <img 
+                          src={post.user.avatar_url} 
+                          alt={post.user.full_name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                          {post.user.full_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{post.user.full_name}</p>
+                        <p className="text-sm text-gray-700 line-clamp-2">{post.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* All Posts Feed */}
+          <div className="space-y-6">
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-700">Loading posts...</p>
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-700">No posts yet. Be the first to post!</p>
+              </div>
+            ) : (
+              posts.map((post) => (
+                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-6">
+                  {/* User Info */}
+                  <div className="flex items-center mb-4">
+                    {post.user.avatar_url ? (
+                      <img 
+                        src={post.user.avatar_url} 
+                        alt={post.user.full_name}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-black"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg border-2 border-black">
+                        {post.user.full_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="ml-3">
+                      <p className="font-semibold text-gray-900">{post.user.full_name}</p>
+                      <p className="text-sm text-gray-600">
+                        {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <p className="mb-4 text-gray-900 whitespace-pre-wrap">{post.content}</p>
+
+                  {/* Images */}
+                  {post.image_urls.length > 0 && (
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      {post.image_urls.map((url, i) => (
+                        <img key={i} src={url} alt="" className="w-full h-64 object-cover rounded border-2 border-black cursor-pointer hover:opacity-90" onClick={() => window.open(url, '_blank')} />
+                      ))}
                     </div>
                   )}
-                  <div className="ml-3">
-                    <p className="font-semibold text-gray-900 dark:text-white">{post.user.full_name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString()}
-                    </p>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-6 pt-4 border-t-2 border-gray-300">
+                    <button
+                      onClick={() => handleLike(post.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded border-2 border-black transition-colors ${
+                        post.user_has_liked
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-white text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <svg className="w-5 h-5" fill={post.user_has_liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                      <span className="font-medium">{post.likes_count} {post.likes_count === 1 ? 'Like' : 'Likes'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const isOpening = commentingOn !== post.id;
+                        setCommentingOn(isOpening ? post.id : null);
+                        if (isOpening && !comments[post.id]) {
+                          loadComments(post.id);
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded border-2 border-black bg-white text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      <span className="font-medium">{post.comments_count} {post.comments_count === 1 ? 'Comment' : 'Comments'}</span>
+                    </button>
                   </div>
-                </div>
 
-                {/* Content */}
-                <p className="mb-4 text-gray-900 dark:text-white whitespace-pre-wrap">{post.content}</p>
-
-                {/* Images */}
-                {post.image_urls.length > 0 && (
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    {post.image_urls.map((url, i) => (
-                      <img key={i} src={url} alt="" className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90" onClick={() => window.open(url, '_blank')} />
-                    ))}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => handleLike(post.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                      post.user_has_liked
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <svg className="w-5 h-5" fill={post.user_has_liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    <span className="font-medium">{post.likes_count} {post.likes_count === 1 ? 'Like' : 'Likes'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const isOpening = commentingOn !== post.id;
-                      setCommentingOn(isOpening ? post.id : null);
-                      if (isOpening && !comments[post.id]) {
-                        loadComments(post.id);
-                      }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span className="font-medium">{post.comments_count} {post.comments_count === 1 ? 'Comment' : 'Comments'}</span>
-                  </button>
-                </div>
-
-                {/* Comments Section */}
-                {commentingOn === post.id && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
-                    {/* Comment Input */}
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                        placeholder="Write a comment..."
-                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-                                 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white
-                                 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button
-                        onClick={() => handleComment(post.id)}
-                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                      >
-                        Post
-                      </button>
-                    </div>
-
-                    {/* Comments List */}
-                    {loadingComments[post.id] ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Loading comments...</p>
-                    ) : comments[post.id]?.length > 0 ? (
-                      <div className="space-y-3">
-                        {comments[post.id].map((comment: any) => (
-                          <div key={comment.id} className="flex gap-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                            {comment.user.avatar_url ? (
-                              <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-8 h-8 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
-                                {comment.user.full_name.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{comment.user.full_name}</p>
-                              <p className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {new Date(comment.created_at).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                  {/* Comments Section */}
+                  {commentingOn === post.id && (
+                    <div className="mt-4 pt-4 border-t-2 border-gray-300 space-y-4">
+                      {/* Comment Input */}
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
+                          placeholder="Write a comment..."
+                          className="flex-1 px-4 py-2 border-2 border-black rounded bg-white text-gray-900"
+                        />
+                        <button
+                          onClick={() => handleComment(post.id)}
+                          className="px-6 py-2 bg-black text-white font-medium rounded hover:bg-gray-800 transition-colors"
+                        >
+                          Post
+                        </button>
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet. Be the first to comment!</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
+
+                      {/* Comments List */}
+                      {loadingComments[post.id] ? (
+                        <p className="text-sm text-gray-600">Loading comments...</p>
+                      ) : comments[post.id]?.length > 0 ? (
+                        <div className="space-y-3">
+                          {comments[post.id].map((comment: any) => (
+                            <div key={comment.id} className="flex gap-3 bg-gray-100 p-3 rounded border border-gray-300">
+                              {comment.user.avatar_url ? (
+                                <img src={comment.user.avatar_url} alt={comment.user.full_name} className="w-8 h-8 rounded-full object-cover border-2 border-black" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold border-2 border-black">
+                                  {comment.user.full_name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-gray-900">{comment.user.full_name}</p>
+                                <p className="text-sm text-gray-700">{comment.content}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(comment.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">No comments yet. Be the first to comment!</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
