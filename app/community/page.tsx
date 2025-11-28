@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
-import { ArrowLeft, Search, Filter, MessageCircle, User } from 'lucide-react';
+import { ArrowLeft, Search, Filter, MessageCircle, User, Ban } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Post {
@@ -40,6 +40,7 @@ export default function CommunityPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [isBanned, setIsBanned] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -62,6 +63,17 @@ export default function CommunityPage() {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
+    
+    // Check if user is banned
+    if (user) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('is_banned')
+        .eq('id', user.id)
+        .single();
+      
+      setIsBanned((userData as any)?.is_banned || false);
+    }
   };
 
   const loadPosts = async () => {
@@ -319,6 +331,21 @@ export default function CommunityPage() {
       {/* Main Content */}
       <div className="flex-1 ml-48 mr-72 p-4">
         <div className="max-w-4xl mx-auto">
+          {/* Banned User Warning */}
+          {isBanned && (
+            <div className="bg-red-100 border-2 border-red-600 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <Ban className="w-6 h-6 text-red-600" />
+                <div>
+                  <h3 className="font-bold text-red-900">Account Suspended</h3>
+                  <p className="text-sm text-red-800">
+                    Your account has been suspended due to violations of community guidelines. 
+                    You cannot create posts or comments. Please contact an administrator to appeal this decision.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Header */}
           <div className="bg-white border-2 border-black rounded-lg p-4 mb-4">
             <div className="flex items-center gap-3 mb-3">
@@ -442,7 +469,12 @@ export default function CommunityPage() {
                       </div>
                     )}
                     <div className="ml-3">
-                      <p className="font-semibold text-gray-900 text-sm">{post.user.full_name}</p>
+                      <button
+                        onClick={() => router.push(`/profile/${post.user.id}`)}
+                        className="font-semibold text-gray-900 text-sm hover:underline text-left"
+                      >
+                        {post.user.full_name}
+                      </button>
                       <p className="text-xs text-gray-600">
                         {new Date(post.created_at).toLocaleDateString()} at {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -509,22 +541,28 @@ export default function CommunityPage() {
                   {commentingOn === post.id && (
                     <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
                       {/* Comment Input */}
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={commentText}
-                          onChange={(e) => setCommentText(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                          placeholder="Write a comment..."
-                          className="flex-1 px-3 py-2 border-2 border-black rounded bg-white text-gray-900 text-sm"
-                        />
-                        <button
-                          onClick={() => handleComment(post.id)}
-                          className="px-4 py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
-                        >
-                          Post
-                        </button>
-                      </div>
+                      {isBanned ? (
+                        <div className="bg-red-50 border border-red-300 rounded p-2 text-center">
+                          <p className="text-xs text-red-700">You cannot comment while your account is suspended.</p>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
+                            placeholder="Write a comment..."
+                            className="flex-1 px-3 py-2 border-2 border-black rounded bg-white text-gray-900 text-sm"
+                          />
+                          <button
+                            onClick={() => handleComment(post.id)}
+                            className="px-4 py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
+                          >
+                            Post
+                          </button>
+                        </div>
+                      )}
 
                       {/* Comments List */}
                       {loadingComments[post.id] ? (
@@ -591,7 +629,12 @@ export default function CommunityPage() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-xs">{post.user.full_name}</p>
+                        <button
+                          onClick={() => router.push(`/profile/${post.user.id}`)}
+                          className="font-semibold text-gray-900 text-xs hover:underline text-left"
+                        >
+                          {post.user.full_name}
+                        </button>
                         <p className="text-xs text-gray-700 line-clamp-2">{post.content}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                           <span>❤️ {post.likes_count}</span>
@@ -671,12 +714,14 @@ export default function CommunityPage() {
         </div>
 
         {/* Floating Create Post Button */}
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-6 right-[19rem] w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-2xl z-10"
-        >
-          +
-        </button>
+        {!isBanned && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="fixed bottom-6 right-[19rem] w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-2xl z-10"
+          >
+            +
+          </button>
+        )}
 
         {/* Create Post Modal */}
         {showCreateModal && (

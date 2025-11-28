@@ -33,6 +33,20 @@ export async function POST(request: NextRequest) {
 
     console.log('Authenticated user:', user.id);
 
+    // Check if user is banned
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('is_banned')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || userData?.is_banned) {
+      return NextResponse.json(
+        { error: 'You have been banned from posting' },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const content = formData.get('content') as string;
     const images = formData.getAll('images') as File[];
@@ -125,6 +139,7 @@ export async function POST(request: NextRequest) {
         tags: tags,
         status: postStatus,
         toxicity_scores: moderation.isAvailable ? moderation.scores : null,
+        flagged_reason: moderation.shouldFlag ? moderation.flaggedReason : null,
       })
       .select()
       .single();

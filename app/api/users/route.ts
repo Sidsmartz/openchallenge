@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Query users
     let query = supabase
       .from('users')
-      .select('id, full_name, email, avatar_url')
+      .select('id, full_name, email, avatar_url, is_banned')
       .order('full_name', { ascending: true })
       .limit(50);
 
