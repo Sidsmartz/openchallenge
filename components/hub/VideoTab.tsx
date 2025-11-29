@@ -95,17 +95,20 @@ export default function VideoTab() {
     if (userRole) {
       loadUploadedVideos();
       loadNotes();
-    }
-    
-    // Check if there's a video to auto-load from home page
-    const autoLoadVideoData = localStorage.getItem('autoLoadVideo');
-    if (autoLoadVideoData) {
-      try {
-        const videoData = JSON.parse(autoLoadVideoData);
-        localStorage.removeItem('autoLoadVideo');
-        handleVideoSelect(videoData as VideoItem);
-      } catch (error) {
-        console.error('Error auto-loading video:', error);
+      
+      // Check if there's a video to auto-load from home page
+      const autoLoadVideoData = localStorage.getItem('autoLoadVideo');
+      if (autoLoadVideoData) {
+        try {
+          const videoData = JSON.parse(autoLoadVideoData);
+          localStorage.removeItem('autoLoadVideo');
+          // Use setTimeout to ensure component is fully mounted
+          setTimeout(() => {
+            handleVideoSelect(videoData as VideoItem);
+          }, 100);
+        } catch (error) {
+          console.error('Error auto-loading video:', error);
+        }
       }
     }
   }, [userRole]);
@@ -649,18 +652,18 @@ export default function VideoTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Video Library Grid */}
       {!videoUrl && !showUploadForm && (
-        <div className="bg-[#FFF7E4] border-2 border-black p-6 shadow-[8px_8px_0px_#000] min-h-[75vh]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-black uppercase tracking-tight">
+        <div className="bg-[#FFF7E4] border-2 border-black p-3 sm:p-4 md:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] min-h-[75vh]">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
               {userRole === "faculty" ? "My Videos" : "Video Library"}
             </h2>
             {userRole === "faculty" && (
               <button
                 onClick={() => setShowUploadForm(true)}
-                className="px-6 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-[#F4C430] border-2 border-black font-bold text-sm sm:text-base uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000] transition-all"
               >
                 Upload New Video
               </button>
@@ -669,17 +672,17 @@ export default function VideoTab() {
 
           {/* Tag Filter for Students */}
           {userRole === "student" && allTags.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-xs sm:text-sm font-bold mb-2 uppercase tracking-wider">
                 Filter by Tag:
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 <button
                   onClick={() => setSelectedTagFilter(null)}
-                  className={`px-4 py-2 border-2 border-black font-bold text-sm uppercase tracking-wider transition-all ${
+                  className={`px-3 sm:px-4 py-1 sm:py-2 border-2 border-black font-bold text-xs sm:text-sm uppercase tracking-wider transition-all ${
                     selectedTagFilter === null
-                      ? "bg-[#6B9BD1] text-white shadow-[4px_4px_0px_#000] translate-x-[-2px] translate-y-[-2px]"
-                      : "bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                      ? "bg-[#6B9BD1] text-white shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000] translate-x-[-1px] translate-y-[-1px] sm:translate-x-[-2px] sm:translate-y-[-2px]"
+                      : "bg-white hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000]"
                   }`}
                 >
                   All
@@ -688,10 +691,10 @@ export default function VideoTab() {
                   <button
                     key={tag}
                     onClick={() => setSelectedTagFilter(tag)}
-                    className={`px-4 py-2 border-2 border-black font-bold text-sm uppercase tracking-wider transition-all ${
+                    className={`px-3 sm:px-4 py-1 sm:py-2 border-2 border-black font-bold text-xs sm:text-sm uppercase tracking-wider transition-all ${
                       selectedTagFilter === tag
-                        ? "bg-[#6B9BD1] text-white shadow-[4px_4px_0px_#000] translate-x-[-2px] translate-y-[-2px]"
-                        : "bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                        ? "bg-[#6B9BD1] text-white shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000] translate-x-[-1px] translate-y-[-1px] sm:translate-x-[-2px] sm:translate-y-[-2px]"
+                        : "bg-white hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000]"
                     }`}
                   >
                     {tag}
@@ -702,12 +705,12 @@ export default function VideoTab() {
           )}
 
           {loadingVideos ? (
-            <div className="bg-white border-2 border-black p-12 text-center shadow-[4px_4px_0px_#000]">
-              <p className="text-gray-600 font-bold">Loading videos...</p>
+            <div className="bg-white border-2 border-black p-6 sm:p-12 text-center shadow-[4px_4px_0px_#000]">
+              <p className="text-sm sm:text-base text-gray-600 font-bold">Loading videos...</p>
             </div>
           ) : filteredVideos.length === 0 ? (
-            <div className="bg-white border-2 border-black p-12 text-center shadow-[4px_4px_0px_#000]">
-              <p className="text-gray-600 font-bold mb-4">
+            <div className="bg-white border-2 border-black p-6 sm:p-12 text-center shadow-[4px_4px_0px_#000]">
+              <p className="text-sm sm:text-base text-gray-600 font-bold mb-3 sm:mb-4">
                 {userRole === "faculty" 
                   ? "No videos uploaded yet" 
                   : selectedTagFilter 
@@ -717,14 +720,14 @@ export default function VideoTab() {
               {userRole === "faculty" && (
                 <button
                   onClick={() => setShowUploadForm(true)}
-                  className="px-6 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-[#F4C430] border-2 border-black font-bold text-sm sm:text-base uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000] transition-all"
                 >
                   Upload Your First Video
                 </button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {filteredVideos.map((video) => (
                 <div
                   key={video.id}
@@ -948,34 +951,36 @@ export default function VideoTab() {
       {/* Video Player - Simplified for both roles */}
       {videoUrl && (
         <div className="space-y-6">
-          <div
-            className="bg-black rounded-lg overflow-hidden relative"
-            style={{ aspectRatio: "16/9" }}
-          >
-            <div data-vjs-player>
-              <video
-                ref={videoRef}
-                className="video-js vjs-big-play-centered"
-                playsInline
-              >
-                <source src={videoUrl} type="video/mp4" />
-              </video>
-            </div>
-
-            {currentSubtitle && (
-              <div
-                ref={subtitleContainerRef}
-                className="absolute bottom-20 left-0 right-0 flex justify-center px-4 pointer-events-none z-10"
-                style={{
-                  fontSize: `${fontSize}px`,
-                  fontFamily: fontFamily,
-                }}
-              >
-                <div className="bg-black/75 text-white px-4 py-2 rounded-lg max-w-4xl text-center">
-                  {currentSubtitle.text}
-                </div>
+          <div className="bg-[#FFF7E4] border-2 border-black p-6 shadow-[8px_8px_0px_#000]">
+            <div
+              className="bg-black overflow-hidden relative w-full"
+              style={{ aspectRatio: "16/9" }}
+            >
+              <div data-vjs-player className="w-full h-full">
+                <video
+                  ref={videoRef}
+                  className="video-js vjs-big-play-centered w-full h-full"
+                  playsInline
+                >
+                  <source src={videoUrl} type="video/mp4" />
+                </video>
               </div>
-            )}
+
+              {currentSubtitle && (
+                <div
+                  ref={subtitleContainerRef}
+                  className="absolute bottom-20 left-0 right-0 flex justify-center px-4 pointer-events-none z-10"
+                  style={{
+                    fontSize: `${fontSize}px`,
+                    fontFamily: fontFamily,
+                  }}
+                >
+                  <div className="bg-black/75 text-white px-4 py-2 rounded-lg max-w-4xl text-center">
+                    {currentSubtitle.text}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

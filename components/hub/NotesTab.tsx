@@ -178,29 +178,29 @@ export default function NotesTab() {
   // Student View
   if (userRole === "student") {
     return (
-      <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-8 flex flex-col gap-6 shadow-[8px_8px_0px_#000] min-h-[75vh]">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-[#FFF7E4] border-2 border-black p-3 sm:p-4 md:p-8 flex flex-col gap-4 sm:gap-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] min-h-[75vh]">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-500" />
+              <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
             </div>
             <input
               type="text"
               placeholder="Search subjects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-black bg-white focus:outline-none focus:shadow-[4px_4px_0px_#000] transition-all placeholder:text-gray-500 font-medium"
+              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border-2 border-black bg-white focus:outline-none focus:shadow-[2px_2px_0px_#000] sm:focus:shadow-[4px_4px_0px_#000] transition-all placeholder:text-gray-500 font-medium text-sm sm:text-base"
             />
           </div>
           
-          <div className="flex gap-2 items-center">
-            <Filter className="h-5 w-5" />
-            <span className="font-bold text-sm">Units:</span>
+          <div className="flex gap-1 sm:gap-2 items-center flex-wrap">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="font-bold text-xs sm:text-sm">Units:</span>
             {[1, 2, 3, 4, 5].map((unit) => (
               <button
                 key={unit}
                 onClick={() => toggleUnitFilter(unit)}
-                className={`px-3 py-2 border-2 border-black font-bold text-sm transition-all ${
+                className={`px-2 sm:px-3 py-1 sm:py-2 border-2 border-black font-bold text-xs sm:text-sm transition-all ${
                   selectedUnits.includes(unit)
                     ? "bg-[#F4C430] shadow-[2px_2px_0px_#000]"
                     : "bg-white hover:bg-gray-50"
@@ -218,19 +218,19 @@ export default function NotesTab() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
             </div>
           ) : filteredNotes.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-              <div className="w-24 h-24 bg-[#F4C430] border-2 border-black rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_#000]">
-                <FileText className="h-10 w-10" />
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-50 py-8">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-[#F4C430] border-2 border-black rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-[4px_4px_0px_#000]">
+                <FileText className="h-8 w-8 sm:h-10 sm:w-10" />
               </div>
-              <h3 className="text-2xl font-bold mb-2">No Notes Available</h3>
-              <p className="text-gray-600 max-w-xs">
+              <h3 className="text-lg sm:text-2xl font-bold mb-2">No Notes Available</h3>
+              <p className="text-sm sm:text-base text-gray-600 max-w-xs px-4">
                 {searchQuery || selectedUnits.length > 0
                   ? "Try adjusting your filters"
                   : "No study materials have been uploaded yet"}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {filteredNotes.map((note) => (
                 <div
                   key={note.id}
@@ -265,9 +265,9 @@ export default function NotesTab() {
 
   // Faculty View
   return (
-    <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-8 flex flex-col sm:flex-row gap-6 shadow-[8px_8px_0px_#000] min-h-[75vh]">
+    <div className="bg-[#FFF7E4] border-2 border-black p-3 sm:p-4 md:p-8 flex flex-col sm:flex-row gap-4 sm:gap-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] min-h-[75vh]">
       {/* Left Panel: Subjects List */}
-      <div className="w-full sm:w-1/3 flex flex-col gap-4 h-full">
+      <div className="w-full sm:w-1/3 flex flex-col gap-3 sm:gap-4 h-full">
         <div className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-500" />

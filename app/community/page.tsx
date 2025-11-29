@@ -451,10 +451,10 @@ export default function CommunityPage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-56 flex items-center justify-center">
+        <div className="flex-1 sm:ml-56 pt-20 sm:pt-0 flex items-center justify-center p-4">
           <div className="text-center">
-            <h1 className="text-3xl font-bold mb-4 text-gray-900">Community</h1>
-            <p className="text-gray-700">Please log in to view and create posts</p>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-gray-900">Community</h1>
+            <p className="text-sm sm:text-base text-gray-700">Please log in to view and create posts</p>
           </div>
         </div>
       </div>
@@ -467,7 +467,7 @@ export default function CommunityPage() {
       <Toaster position="top-right" richColors />
       
       {/* Main Content */}
-      <div className="flex-1 ml-56 p-4">
+      <div className="flex-1 sm:ml-56 pt-20 sm:pt-0 p-3 sm:p-4">
         <div className="max-w-4xl mx-auto">
           {/* Banned User Warning */}
           {isBanned && (
@@ -485,18 +485,18 @@ export default function CommunityPage() {
             </div>
           )}
           {/* Header */}
-          <div className="bg-white border-2 border-black rounded-lg p-4 mb-4 shadow-[4px_4px_0px_#000]">
-            <div className="flex items-center gap-3 mb-3">
+          <div className="bg-white border-2 border-black rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000]">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3">
               <button 
                 onClick={() => router.back()}
-                className="p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors"
+                className="p-1.5 sm:p-2 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex-shrink-0"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
                   <input
                     type="text"
                     placeholder={
@@ -506,7 +506,7 @@ export default function CommunityPage() {
                     }
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border-2 border-black rounded bg-white text-sm"
+                    className="w-full pl-7 sm:pl-9 pr-2 sm:pr-3 py-1.5 sm:py-2 border-2 border-black rounded bg-white text-xs sm:text-sm"
                   />
                 </div>
               </div>
@@ -520,27 +520,27 @@ export default function CommunityPage() {
                   <img 
                     src={user.user_metadata.avatar_url} 
                     alt="Profile"
-                    className="w-9 h-9 rounded-full border-2 border-black object-cover"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-black object-cover"
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                     {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                 )}
               </button>
             </div>
 
-            {/* Community Title and Tabs */}
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-gray-900">Community</h1>
+            {/* Community Title */}
+            <div className="mb-3 sm:mb-4">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Community</h1>
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-2">
+            <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+              <div className="flex gap-1 sm:gap-2 flex-1">
                 <button
                   onClick={() => setActiveTab('posts')}
-                  className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                  className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 sm:py-2 rounded border-2 border-black transition-colors text-xs sm:text-sm font-medium ${
                     activeTab === 'posts'
                       ? 'bg-black text-white'
                       : 'bg-white text-gray-900 hover:bg-gray-100'
@@ -550,7 +550,7 @@ export default function CommunityPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('resources')}
-                  className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                  className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 sm:py-2 rounded border-2 border-black transition-colors text-xs sm:text-sm font-medium ${
                     activeTab === 'resources'
                       ? 'bg-black text-white'
                       : 'bg-white text-gray-900 hover:bg-gray-100'
@@ -560,7 +560,7 @@ export default function CommunityPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('people')}
-                  className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                  className={`flex-1 sm:flex-none px-2 sm:px-4 py-1.5 sm:py-2 rounded border-2 border-black transition-colors text-xs sm:text-sm font-medium ${
                     activeTab === 'people'
                       ? 'bg-black text-white'
                       : 'bg-white text-gray-900 hover:bg-gray-100'
@@ -630,18 +630,18 @@ export default function CommunityPage() {
 
           {/* Posts Tab */}
           {activeTab === 'posts' && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
             {loading ? (
-              <div className="text-center py-8">
-                <p className="text-gray-700 text-sm">Loading posts...</p>
+              <div className="text-center py-6 sm:py-8">
+                <p className="text-gray-700 text-xs sm:text-sm">Loading posts...</p>
               </div>
             ) : posts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-700 text-sm">No posts yet. Be the first to post!</p>
+              <div className="text-center py-6 sm:py-8">
+                <p className="text-gray-700 text-xs sm:text-sm">No posts yet. Be the first to post!</p>
               </div>
             ) : (
               posts.map((post) => (
-                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
+                <div key={post.id} className="bg-white border-2 border-black rounded-lg p-3 sm:p-4 shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000]">
                   {/* User Info */}
                   <div className="flex items-center mb-3">
                     <button
@@ -689,9 +689,9 @@ export default function CommunityPage() {
 
                   {/* Images */}
                   {post.image_urls.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-3">
                       {post.image_urls.map((url, i) => (
-                        <img key={i} src={url} alt="" className="w-full h-48 object-cover rounded border-2 border-black cursor-pointer hover:opacity-90" onClick={() => window.open(url, '_blank')} />
+                        <img key={i} src={url} alt="" className="w-full h-32 sm:h-48 object-cover rounded border-2 border-black cursor-pointer hover:opacity-90" onClick={() => window.open(url, '_blank')} />
                       ))}
                     </div>
                   )}
@@ -809,12 +809,12 @@ export default function CommunityPage() {
 
           {/* Resources Tab */}
           {activeTab === 'resources' && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* Upload Button */}
               {!isBanned && (
                 <button
                   onClick={() => setShowUploadModal(true)}
-                  className="w-full px-4 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm sm:text-base"
                 >
                   + Upload Resource
                 </button>
@@ -822,12 +822,12 @@ export default function CommunityPage() {
 
               {/* Resources List */}
               {resources.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-700 text-sm">No resources yet. Be the first to share!</p>
+                <div className="text-center py-6 sm:py-8">
+                  <p className="text-gray-700 text-xs sm:text-sm">No resources yet. Be the first to share!</p>
                 </div>
               ) : (
                 resources.map((resource) => (
-                  <div key={resource.id} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
+                  <div key={resource.id} className="bg-white border-2 border-black rounded-lg p-3 sm:p-4 shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000]">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h3 className="font-bold text-lg mb-1">{resource.title}</h3>
@@ -870,10 +870,10 @@ export default function CommunityPage() {
 
           {/* People Tab */}
           {activeTab === 'people' && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* User List */}
-              <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
-                <h2 className="text-xl font-bold mb-3 text-gray-900">Find People</h2>
+              <div className="bg-white border-2 border-black rounded-lg p-3 sm:p-4 shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000]">
+                <h2 className="text-lg sm:text-xl font-bold mb-3 text-gray-900">Find People</h2>
 
                 {/* Users List */}
                 <div className="space-y-2">
@@ -941,7 +941,7 @@ export default function CommunityPage() {
         {!isBanned && activeTab !== 'people' && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-2xl z-10"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-xl sm:text-2xl z-10"
           >
             +
           </button>

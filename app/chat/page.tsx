@@ -421,8 +421,8 @@ export default function ChatPage() {
       <div className="min-h-screen bg-[#F5F1E8] flex">
         <Sidebar />
         <Toaster position="top-right" />
-        <div className="flex-1 ml-56 flex items-center justify-center">
-          <p className="text-gray-700">Please log in to access chat</p>
+        <div className="flex-1 sm:ml-56 pt-20 sm:pt-0 flex items-center justify-center p-4">
+          <p className="text-sm sm:text-base text-gray-700">Please log in to access chat</p>
         </div>
       </div>
     );
@@ -433,35 +433,35 @@ export default function ChatPage() {
       <Sidebar />
       <Toaster position="top-right" richColors />
       
-      <div className="flex-1 ml-56 flex">
-        {/* Conversations List */}
-        <div className="w-72 bg-white border-r-2 border-black h-screen overflow-y-auto">
-          <div className="px-4 py-4 border-b-2 border-black h-[73px] flex items-center bg-[#F4C430]">
+      <div className="flex-1 sm:ml-56 pt-16 sm:pt-0 flex">
+        {/* Conversations List - Hidden on mobile when chat is selected */}
+        <div className={`${selectedConversation ? 'hidden sm:flex' : 'flex'} w-full sm:w-72 bg-white sm:border-r-2 border-black h-[calc(100vh-4rem)] sm:h-screen overflow-y-auto flex-col`}>
+          <div className="px-3 sm:px-4 py-3 sm:py-4 border-b-2 border-black flex items-center bg-[#F4C430]">
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => router.back()}
-                  className="p-1.5 border-2 border-black rounded hover:bg-black hover:text-white transition-colors"
+                  className="p-1 sm:p-1.5 border-2 border-black rounded hover:bg-black hover:text-white transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Messages</h1>
               </div>
               <button
                 onClick={() => setShowNewChatModal(true)}
-                className="p-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+                className="p-1.5 sm:p-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
                 title="New Chat"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
 
-          <div className="p-3 space-y-2">
+          <div className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
             {loading ? (
-              <p className="text-center text-gray-600 py-6 text-sm">Loading...</p>
+              <p className="text-center text-gray-600 py-4 sm:py-6 text-xs sm:text-sm">Loading...</p>
             ) : conversations.length === 0 ? (
-              <p className="text-center text-gray-600 py-6 text-sm">No conversations yet</p>
+              <p className="text-center text-gray-600 py-4 sm:py-6 text-xs sm:text-sm">No conversations yet</p>
             ) : (
               conversations.map((conv) => {
                 if (!conv.otherUser) return null;
@@ -469,10 +469,10 @@ export default function ChatPage() {
                   <button
                     key={conv.id}
                     onClick={() => setSelectedConversation(conv.id)}
-                    className={`w-full p-2.5 rounded-lg border-2 transition-all text-left shadow-[2px_2px_0px_#000] ${
+                    className={`w-full p-2 sm:p-2.5 rounded-lg border-2 transition-all text-left shadow-[2px_2px_0px_#000] ${
                       selectedConversation === conv.id
                         ? 'bg-black text-white border-black'
-                        : 'bg-white border-black hover:bg-gray-50 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]'
+                        : 'bg-white border-black hover:bg-gray-50 hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000]'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -503,65 +503,73 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        {/* Chat Area - Full screen on mobile when selected */}
+        <div className={`${selectedConversation ? 'flex' : 'hidden sm:flex'} flex-1 flex-col`}>
           {selectedConv && selectedConv.otherUser ? (
             <>
               {/* Chat Header */}
-              <div className="bg-white border-b-2 border-black px-4 py-4 h-[73px] flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="bg-white border-b-2 border-black px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                  {/* Back button on mobile */}
+                  <button
+                    onClick={() => setSelectedConversation(null)}
+                    className="sm:hidden p-1 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex-shrink-0"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  
                   {selectedConv.otherUser?.avatar_url ? (
                     <img 
                       src={selectedConv.otherUser.avatar_url} 
                       alt={selectedConv.otherUser.full_name || 'User'}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-black"
+                      className="w-9 h-9 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-black flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg border-2 border-black">
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm sm:text-lg border-2 border-black flex-shrink-0">
                       {selectedConv.otherUser?.full_name?.charAt(0).toUpperCase() || selectedConv.otherUser?.email?.charAt(0).toUpperCase() || 'U'}
                     </div>
                   )}
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <button
                       onClick={() => router.push(`/profile/${selectedConv.otherUser?.id}`)}
-                      className="font-bold text-xl text-gray-900 hover:underline text-left"
+                      className="font-bold text-sm sm:text-lg md:text-xl text-gray-900 hover:underline text-left truncate block w-full"
                     >
                       {selectedConv.otherUser?.full_name || selectedConv.otherUser?.email || 'Unknown User'}
                     </button>
                     {selectedConv.otherUser?.full_name && (
-                      <p className="text-sm text-gray-600">{selectedConv.otherUser.email}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">{selectedConv.otherUser.email}</p>
                     )}
                   </div>
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                   <button
                     onClick={handleBlockUser}
-                    className={`p-2 border-2 border-black rounded-lg transition-colors ${
+                    className={`p-1.5 sm:p-2 border-2 border-black rounded-lg transition-colors ${
                       blockedUsers.includes(selectedConv.otherUser?.id || '')
                         ? 'bg-gray-200 hover:bg-gray-300'
                         : 'hover:bg-orange-50 hover:border-orange-600'
                     }`}
                     title={blockedUsers.includes(selectedConv.otherUser?.id || '') ? 'Unblock User' : 'Block User'}
                   >
-                    <UserX className={`w-5 h-5 ${blockedUsers.includes(selectedConv.otherUser?.id || '') ? 'text-gray-600' : 'text-orange-600'}`} />
+                    <UserX className={`w-4 h-4 sm:w-5 sm:h-5 ${blockedUsers.includes(selectedConv.otherUser?.id || '') ? 'text-gray-600' : 'text-orange-600'}`} />
                   </button>
                   <button
                     onClick={() => setShowReportModal(true)}
-                    className="p-2 border-2 border-black rounded-lg hover:bg-red-50 hover:border-red-600 transition-colors"
+                    className="p-1.5 sm:p-2 border-2 border-black rounded-lg hover:bg-red-50 hover:border-red-600 transition-colors"
                     title="Report Chat"
                   >
-                    <Flag className="w-5 h-5 text-red-600" />
+                    <Flag className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                   </button>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
                 {blockedUsers.includes(selectedConv.otherUser?.id || '') && (
-                  <div className="bg-orange-100 border-2 border-orange-600 rounded-lg p-3 text-center">
-                    <p className="text-sm text-orange-800 font-medium">
+                  <div className="bg-orange-100 border-2 border-orange-600 rounded-lg p-2 sm:p-3 text-center">
+                    <p className="text-xs sm:text-sm text-orange-800 font-medium">
                       You have blocked this user. They cannot send you new messages.
                     </p>
                   </div>
@@ -570,8 +578,8 @@ export default function ChatPage() {
                   const isOwn = message.sender_id === user.id;
                   return (
                     <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                        <div className={`p-3 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] ${
+                      <div className={`max-w-[85%] sm:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                        <div className={`p-2 sm:p-3 rounded-lg border-2 border-black shadow-[2px_2px_0px_#000] ${
                           isOwn ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'
                         }`}>
                           {message.attachment_url && (
