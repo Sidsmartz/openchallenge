@@ -1,45 +1,18 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
-let supabaseInstance: SupabaseClient<Database> | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-function getSupabase() {
-  if (typeof window === 'undefined') {
-    // Server-side: create a new instance each time
-    return createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-        },
-      }
-    );
-  }
-  
-  // Client-side: reuse the same instance
-  if (!supabaseInstance) {
-    supabaseInstance = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-        },
-      }
-    );
-  }
-  return supabaseInstance;
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase environment variables are not set');
 }
 
-export const supabase = new Proxy({} as SupabaseClient<Database>, {
-  get: (target, prop) => {
-    const client = getSupabase();
-    return (client as any)[prop];
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
   },
 });
 
