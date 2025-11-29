@@ -7,6 +7,9 @@ import Sidebar from "@/components/Sidebar";
 import NotificationBell from "@/components/NotificationBell";
 import { Search, ArrowLeft, Play } from "lucide-react";
 
+// Prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface LastWatchedVideo {
   id: string;
   file_name: string;

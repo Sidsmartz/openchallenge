@@ -7,6 +7,9 @@ import Sidebar from '@/components/Sidebar';
 import { ArrowLeft, Search, Filter, MessageCircle, User, Ban, Upload, FileText, Flag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+// Prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface Post {
   id: string;
   user: { id: string; full_name: string; avatar_url?: string; };

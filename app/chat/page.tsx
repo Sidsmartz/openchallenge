@@ -7,6 +7,9 @@ import Sidebar from '@/components/Sidebar';
 import { ArrowLeft, Send, Plus, Search, MessageCircle, Paperclip, Flag, X, Image as ImageIcon, FileText, UserX } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// Prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface Message {
   id: string;
   content: string;

@@ -7,6 +7,9 @@ import Sidebar from '@/components/Sidebar';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, MessageCircle, Edit, Plus, X, Briefcase, Link as LinkIcon, Check, Github, Linkedin, Instagram, Facebook, Twitter, FileText } from 'lucide-react';
 
+// Prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface WorkExperience {
   id: string;
   title: string;
