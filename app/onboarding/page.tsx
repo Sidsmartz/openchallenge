@@ -493,20 +493,20 @@ export default function OnboardingPage() {
   // Show standalone login screen if user is not authenticated
   if (!userId) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-4 sm:p-8">
-        <div className="w-full sm:w-[90%] max-w-[1200px] min-h-[85vh] bg-[#FFF7E4] border-2 border-black p-6 sm:p-12 flex justify-center items-center">
-          <div className="w-full sm:w-[700px] bg-[#F4C430] shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] border-2 border-black p-6 sm:p-12">
-            <div className="flex flex-col items-center justify-center gap-4 sm:gap-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-center">Welcome!</h1>
-              <p className="text-center text-sm sm:text-base text-[#333] mb-2 sm:mb-4">
+      <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-3 xs:p-4 sm:p-8">
+        <div className="w-full sm:w-[90%] max-w-[1200px] min-h-[85vh] bg-[#FFF7E4] border-2 border-black p-4 xs:p-6 sm:p-12 flex justify-center items-center">
+          <div className="w-full sm:w-[700px] bg-[#F4C430] shadow-[3px_3px_0px_#000] xs:shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] border-2 border-black p-4 xs:p-6 sm:p-12">
+            <div className="flex flex-col items-center justify-center gap-3 xs:gap-4 sm:gap-6">
+              <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold text-center">Welcome!</h1>
+              <p className="text-center text-xs xs:text-sm sm:text-base text-[#333] mb-1 xs:mb-2 sm:mb-4 px-2">
                 Sign in with your Google account to get started
               </p>
               <button
                 onClick={handleGoogleSignIn}
-                className="flex items-center gap-2 sm:gap-3 bg-white border-2 border-[#333] rounded-lg px-6 sm:px-8 py-3 sm:py-4 hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_#000]"
+                className="flex items-center gap-2 xs:gap-2 sm:gap-3 bg-white border-2 border-[#333] rounded-lg px-4 xs:px-6 sm:px-8 py-2.5 xs:py-3 sm:py-4 hover:bg-gray-50 transition-colors shadow-[3px_3px_0px_#000] xs:shadow-[4px_4px_0px_#000] text-sm xs:text-base"
               >
                 <svg
-                  className="w-6 h-6"
+                  className="w-5 h-5 xs:w-6 xs:h-6 flex-shrink-0"
                   viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
                 >
@@ -527,7 +527,7 @@ export default function OnboardingPage() {
                     fill="#EA4335"
                   />
                 </svg>
-                <span className="font-medium text-lg">Sign in with Google</span>
+                <span className="font-medium">Sign in with Google</span>
               </button>
             </div>
           </div>
@@ -538,9 +538,9 @@ export default function OnboardingPage() {
 
   // Show stepper for authenticated users who need to complete onboarding
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-8">
-      <div className="w-[90%] max-w-[1200px] h-[85vh] bg-[#FFF7E4] border-2 border-black p-12 flex justify-center items-center">
-        <div className="w-[700px] h-[500px] bg-[#F4C430] shadow-[8px_8px_0px_#000] overflow-hidden border-2 border-black">
+    <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-2 xs:p-3 sm:p-8">
+      <div className="w-full xs:w-[95%] sm:w-[90%] max-w-[1200px] h-[90vh] xs:h-[85vh] sm:h-[85vh] bg-[#FFF7E4] border-2 border-black p-3 xs:p-4 sm:p-12 flex justify-center items-center">
+        <div className="w-full xs:max-w-[500px] sm:w-[700px] h-[calc(100%-2rem)] xs:h-[calc(100%-3rem)] sm:h-[500px] bg-[#F4C430] shadow-[3px_3px_0px_#000] xs:shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] border-2 border-black flex flex-col">
           {onboardingComplete ? (
             <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
               <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center border-4 border-black shadow-[4px_4px_0px_#000]">
@@ -577,11 +577,11 @@ export default function OnboardingPage() {
             {/* Step 1: Select Your Role */}
             <Step>
               <div>
-                <h2 className="text-xl font-bold mb-4 text-center">
+                <h2 className="text-base xs:text-lg sm:text-xl font-bold mb-3 xs:mb-4 text-center">
                   Choose Your Role
                 </h2>
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <div className="flex flex-col gap-2 xs:gap-2.5 sm:gap-3">
                   {[
                     {
                       value: "student",
@@ -602,16 +602,16 @@ export default function OnboardingPage() {
                     <button
                       key={option.value}
                       onClick={() => setRole(option.value)}
-                      className={`flex-1 px-4 py-4 sm:py-6 border-2 border-black font-bold uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-1 sm:gap-2 ${
+                      className={`w-full px-3 xs:px-4 py-3 xs:py-4 border-2 border-black font-bold uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-1 text-left ${
                         role === option.value
-                          ? "bg-[#6B9BD1] text-white shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000] translate-x-[-1px] translate-y-[-1px] sm:translate-x-[-2px] sm:translate-y-[-2px]"
-                          : "bg-white hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000]"
+                          ? "bg-[#6B9BD1] text-white shadow-[2px_2px_0px_#000] xs:shadow-[3px_3px_0px_#000] sm:shadow-[4px_4px_0px_#000] translate-x-[-1px] translate-y-[-1px] xs:translate-x-[-1.5px] xs:translate-y-[-1.5px] sm:translate-x-[-2px] sm:translate-y-[-2px]"
+                          : "bg-white hover:translate-x-[-1px] hover:translate-y-[-1px] xs:hover:translate-x-[-1.5px] xs:hover:translate-y-[-1.5px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] xs:hover:shadow-[3px_3px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000]"
                       }`}
                     >
-                      <div className="text-xs sm:text-sm">
+                      <div className="text-xs xs:text-sm">
                         {option.title}
                       </div>
-                      <div className={`text-[0.6rem] sm:text-[0.65rem] normal-case font-normal leading-tight ${
+                      <div className={`text-[0.6rem] xs:text-[0.65rem] normal-case font-normal leading-tight text-center ${
                         role === option.value ? "text-white/90" : "text-[#666]"
                       }`}>
                         {option.desc}
@@ -625,12 +625,12 @@ export default function OnboardingPage() {
             {/* Step 2: Set Up Your Profile */}
             <Step>
               <div>
-                <h2 className="text-xl font-bold mb-3 text-center">
+                <h2 className="text-base xs:text-lg sm:text-xl font-bold mb-2 xs:mb-3 text-center">
                   Complete Your Profile
                 </h2>
 
                 {role === "student" && (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-2 xs:gap-x-3 sm:gap-x-4 gap-y-2 xs:gap-y-2.5">
                     <InputField
                       label="Full Name"
                       placeholder="Enter your full name"
@@ -663,7 +663,7 @@ export default function OnboardingPage() {
                         setProfileData({ ...profileData, interests: val })
                       }
                     />
-                    <div className="col-span-2">
+                    <div className="col-span-1 xs:col-span-2">
                       <InputField
                         label="Courses Enrolled"
                         placeholder="e.g., Data Structures, Algorithms"
@@ -680,7 +680,7 @@ export default function OnboardingPage() {
                 )}
 
                 {role === "faculty" && (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-2 xs:gap-x-3 sm:gap-x-4 gap-y-2 xs:gap-y-2.5">
                     <InputField
                       label="Full Name"
                       placeholder="Enter your full name"
@@ -716,7 +716,7 @@ export default function OnboardingPage() {
                         })
                       }
                     />
-                    <div className="col-span-2">
+                    <div className="col-span-1 xs:col-span-2">
                       <InputField
                         label="Office Hours"
                         placeholder="e.g., Mon-Fri 2-4 PM"
@@ -730,7 +730,7 @@ export default function OnboardingPage() {
                 )}
 
                 {role === "alumni" && (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-2 xs:gap-x-3 sm:gap-x-4 gap-y-2 xs:gap-y-2.5">
                     <InputField
                       label="Full Name"
                       placeholder="Enter your full name"
@@ -763,7 +763,7 @@ export default function OnboardingPage() {
                         setProfileData({ ...profileData, currentJobTitle: val })
                       }
                     />
-                    <div className="col-span-2 flex items-center gap-2 mt-2">
+                    <div className="col-span-1 xs:col-span-2 flex items-center gap-2 mt-1 xs:mt-2">
                       <input
                         type="checkbox"
                         id="mentorship"
@@ -774,8 +774,9 @@ export default function OnboardingPage() {
                             availableForMentorship: e.target.checked,
                           })
                         }
+                        className="w-4 h-4"
                       />
-                      <label htmlFor="mentorship" className="text-sm">
+                      <label htmlFor="mentorship" className="text-xs xs:text-sm">
                         Available for Mentorship
                       </label>
                     </div>
@@ -795,17 +796,17 @@ export default function OnboardingPage() {
             {/* Step 3: Personalize Your Experience */}
             <Step>
               <div>
-                <h2 className="text-xl font-bold mb-3 text-center">
+                <h2 className="text-base xs:text-lg sm:text-xl font-bold mb-2 xs:mb-3 text-center">
                   Personalize Your Experience
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 xs:gap-4">
+                  <div className="flex flex-col gap-2.5 xs:gap-3">
                     <div>
-                      <label className="block mb-2 font-medium text-sm">
+                      <label className="block mb-1.5 xs:mb-2 font-medium text-xs xs:text-sm">
                         Theme Selection
                       </label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-1.5 xs:gap-2">
                         {["Light", "Dark", "College Colors", "Focus Mode"].map(
                           (theme) => (
                             <button
@@ -816,7 +817,7 @@ export default function OnboardingPage() {
                                   theme: theme.toLowerCase(),
                                 })
                               }
-                              className={`p-2 rounded-md cursor-pointer text-[0.75rem] ${
+                              className={`p-1.5 xs:p-2 rounded-md cursor-pointer text-[0.65rem] xs:text-[0.75rem] ${
                                 preferences.theme === theme.toLowerCase()
                                   ? "border-2 border-[#5227FF] bg-[#f5f3ff]"
                                   : "border border-[#333] bg-white"
@@ -830,10 +831,10 @@ export default function OnboardingPage() {
                     </div>
 
                     <div>
-                      <label className="block mb-2 font-medium text-sm">
+                      <label className="block mb-1.5 xs:mb-2 font-medium text-xs xs:text-sm">
                         AI Summary Mode
                       </label>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 xs:gap-2">
                         {["Brief", "Detailed"].map((mode) => (
                           <button
                             key={mode}
@@ -843,7 +844,7 @@ export default function OnboardingPage() {
                                 aiSummary: mode.toLowerCase(),
                               })
                             }
-                            className={`flex-1 py-2 rounded-md cursor-pointer text-[0.75rem] ${
+                            className={`flex-1 py-1.5 xs:py-2 rounded-md cursor-pointer text-[0.65rem] xs:text-[0.75rem] ${
                               preferences.aiSummary === mode.toLowerCase()
                                 ? "border-2 border-[#5227FF] bg-[#f5f3ff]"
                                 : "border border-[#333] bg-white"
@@ -856,7 +857,7 @@ export default function OnboardingPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 justify-center">
+                  <div className="flex flex-col gap-2.5 xs:gap-3 justify-center">
                     <ToggleOption
                       label="SmartSearch"
                       checked={preferences.smartSearch}
@@ -911,7 +912,7 @@ function InputField({
   
   return (
     <div>
-      <label className="block mb-1 font-medium text-xs">
+      <label className="block mb-0.5 xs:mb-1 font-medium text-[0.65rem] xs:text-xs">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -920,7 +921,7 @@ function InputField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full p-2 border-2 rounded-md text-xs transition-colors ${
+        className={`w-full p-1.5 xs:p-2 border-2 rounded-md text-[0.7rem] xs:text-xs transition-colors ${
           isEmpty && value === "" 
             ? "border-[#333]" 
             : isEmpty 
