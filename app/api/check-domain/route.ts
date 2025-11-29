@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkDomainAccess } from '@/lib/domain-check';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ hasAccess: false }, { status: 401 });
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const hasAccess = checkDomainAccess(user.email || '');
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       hasAccess,
       email: user.email,
       allowedDomains: process.env.ALLOWED_DOMAINS?.split(',').map(d => d.trim()) || []
