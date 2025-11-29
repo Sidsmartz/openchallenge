@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
-import { Play, Upload as UploadIcon, Tag, X } from "lucide-react";
+import { Play, Upload as UploadIcon, Tag, X, Search, BookOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface Subtitle {
@@ -44,6 +44,14 @@ export default function VideoTab() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [notes, setNotes] = useState<any[]>([]);
+  const [subtitleSearchQuery, setSubtitleSearchQuery] = useState("");
+  const [subtitleSearchResults, setSubtitleSearchResults] = useState<any[]>([]);
+  const [showSubtitleSearch, setShowSubtitleSearch] = useState(false);
+  const [flashcards, setFlashcards] = useState<any[]>([]);
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [isGeneratingFlashcards, setIsGeneratingFlashcards] = useState(false);
+  const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("auto");
   const [translateToEnglish, setTranslateToEnglish] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -571,10 +579,83 @@ export default function VideoTab() {
     setShowSearchResults(results.length > 0);
   }, [searchQuery, notes]);
 
+  const handleSubtitleSearch = useCallback(() => {
+    if (!subtitleSearchQuery.trim() || subtitles.length === 0) {
+      setSubtitleSearchResults([]);
+      return;
+    }
+
+    const query = subtitleSearchQuery.toLowerCase();
+    const results = subtitles
+      .map((subtitle, index) => ({ ...subtitle, index }))
+      .filter((subtitle) => subtitle.text.toLowerCase().includes(query));
+    
+    setSubtitleSearchResults(results);
+  }, [subtitleSearchQuery, subtitles]);
+
+  const jumpToSubtitle = (timestamp: number) => {
+    if (playerRef.current) {
+      playerRef.current.currentTime(timestamp);
+      playerRef.current.play();
+    }
+  };
+
+  const generateFlashcards = async () => {
+    if (subtitles.length === 0) {
+      alert("No subtitles available. Please generate subtitles first.");
+      return;
+    }
+
+    setIsGeneratingFlashcards(true);
+    try {
+      const response = await fetch("/api/generate-flashcards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ subtitles }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate flashcards");
+      }
+
+      const data = await response.json();
+      setFlashcards(data.flashcards);
+      setShowFlashcards(true);
+      setCurrentFlashcardIndex(0);
+      setShowFlashcardAnswer(false);
+    } catch (error) {
+      console.error("Error generating flashcards:", error);
+      alert("Failed to generate flashcards. Please try again.");
+    } finally {
+      setIsGeneratingFlashcards(false);
+    }
+  };
+
+  const nextFlashcard = () => {
+    if (currentFlashcardIndex < flashcards.length - 1) {
+      setCurrentFlashcardIndex(currentFlashcardIndex + 1);
+      setShowFlashcardAnswer(false);
+    }
+  };
+
+  const previousFlashcard = () => {
+    if (currentFlashcardIndex > 0) {
+      setCurrentFlashcardIndex(currentFlashcardIndex - 1);
+      setShowFlashcardAnswer(false);
+    }
+  };
+
   useEffect(() => {
     const timer = setTimeout(handleSearch, 300);
     return () => clearTimeout(timer);
   }, [handleSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(handleSubtitleSearch, 300);
+    return () => clearTimeout(timer);
+  }, [handleSubtitleSearch]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -984,57 +1065,204 @@ export default function VideoTab() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
-              <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
-                Controls
-              </h2>
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
+                <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
+                  Controls
+                </h2>
 
-              {subtitles.length === 0 && userRole === "faculty" && (
-                <div className="space-y-3 mb-6 pb-6 border-b-2 border-gray-200">
-                  <h3 className="text-lg font-bold uppercase tracking-wider">
-                    Generate Subtitles
-                  </h3>
-                  <button
-                    onClick={generateSubtitles}
-                    disabled={isGeneratingSubtitles}
-                    className="w-full px-4 py-2 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isGeneratingSubtitles
-                      ? "Generating..."
-                      : "Generate Subtitles"}
-                  </button>
+                {subtitles.length === 0 && userRole === "faculty" && (
+                  <div className="space-y-3 mb-6 pb-6 border-b-2 border-gray-200">
+                    <h3 className="text-lg font-bold uppercase tracking-wider">
+                      Generate Subtitles
+                    </h3>
+                    <button
+                      onClick={generateSubtitles}
+                      disabled={isGeneratingSubtitles}
+                      className="w-full px-4 py-2 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                    >
+                      {isGeneratingSubtitles
+                        ? "Generating..."
+                        : "Generate Subtitles"}
+                    </button>
+                  </div>
+                )}
+
+                {subtitles.length > 0 && (
+                  <div className="p-3 bg-green-50 border-2 border-green-500 mb-6">
+                    <p className="text-sm text-green-800 font-bold">
+                      ✓ Subtitles loaded ({subtitles.length} segments)
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (playerRef.current) {
+                      playerRef.current.dispose();
+                      playerRef.current = null;
+                    }
+                    if (videoUrl && videoUrl.startsWith("blob:")) {
+                      URL.revokeObjectURL(videoUrl);
+                    }
+                    setVideoUrl(null);
+                    setVideoId(null);
+                    setSubtitles([]);
+                    setCurrentSubtitle(null);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setShowUploadForm(false);
+                    setSubtitleSearchQuery("");
+                    setSubtitleSearchResults([]);
+                    setShowSubtitleSearch(false);
+                    setFlashcards([]);
+                    setShowFlashcards(false);
+                  }}
+                  className="w-full px-4 py-2 bg-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                >
+                  Back to Library
+                </button>
+              </div>
+
+              {/* Subtitle Search - Students Only */}
+              {userRole === "student" && subtitles.length > 0 && (
+                <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
+                  <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
+                    Search in Video
+                  </h2>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={subtitleSearchQuery}
+                      onChange={(e) => setSubtitleSearchQuery(e.target.value)}
+                      placeholder="Search subtitles to jump to timestamp..."
+                      className="w-full px-4 py-3 border-2 border-black bg-white font-medium focus:outline-none focus:shadow-[4px_4px_0px_#000] transition-all"
+                    />
+                    
+                    {subtitleSearchResults.length > 0 && (
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {subtitleSearchResults.map((result, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => jumpToSubtitle(result.start)}
+                            className="p-3 bg-[#FFF7E4] border-2 border-black cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-sm font-bold text-[#6B9BD1]">
+                                {formatTime(result.start)}
+                              </span>
+                              <span className="text-xs text-gray-500 font-medium">
+                                Click to jump
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-800 font-medium">
+                              {result.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {subtitleSearchQuery && subtitleSearchResults.length === 0 && (
+                      <div className="p-4 bg-gray-50 border-2 border-gray-300 text-center">
+                        <p className="text-sm text-gray-600 font-medium">
+                          No results found for "{subtitleSearchQuery}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {subtitles.length > 0 && (
-                <div className="p-3 bg-green-50 border-2 border-green-500 mb-6">
-                  <p className="text-sm text-green-800 font-bold">
-                    ✓ Subtitles loaded ({subtitles.length} segments)
-                  </p>
+              {/* Flashcards - Students Only */}
+              {userRole === "student" && subtitles.length > 0 && (
+                <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
+                  <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
+                    Study Flashcards
+                  </h2>
+                  
+                  {!showFlashcards ? (
+                    <button
+                      onClick={generateFlashcards}
+                      disabled={isGeneratingFlashcards}
+                      className="w-full px-4 py-3 bg-[#A8D7B7] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                    >
+                      {isGeneratingFlashcards
+                        ? "Generating Flashcards..."
+                        : "Generate Flashcards from Video"}
+                    </button>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-bold text-gray-600">
+                          Card {currentFlashcardIndex + 1} of {flashcards.length}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setShowFlashcards(false);
+                            setFlashcards([]);
+                            setCurrentFlashcardIndex(0);
+                            setShowFlashcardAnswer(false);
+                          }}
+                          className="text-sm font-bold text-red-600 hover:text-red-800"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="min-h-[200px] p-6 bg-[#FFF7E4] border-2 border-black">
+                        <div className="mb-4">
+                          <h3 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">
+                            Question:
+                          </h3>
+                          <p className="text-lg font-bold text-gray-900">
+                            {flashcards[currentFlashcardIndex]?.question}
+                          </p>
+                        </div>
+
+                        {showFlashcardAnswer && (
+                          <div className="mt-4 pt-4 border-t-2 border-black">
+                            <h3 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">
+                              Answer:
+                            </h3>
+                            <p className="text-base text-gray-800 font-medium">
+                              {flashcards[currentFlashcardIndex]?.answer}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        {!showFlashcardAnswer ? (
+                          <button
+                            onClick={() => setShowFlashcardAnswer(true)}
+                            className="flex-1 px-4 py-3 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
+                          >
+                            Show Answer
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={previousFlashcard}
+                              disabled={currentFlashcardIndex === 0}
+                              className="flex-1 px-4 py-3 bg-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-200 disabled:cursor-not-allowed transition-all"
+                            >
+                              Previous
+                            </button>
+                            <button
+                              onClick={nextFlashcard}
+                              disabled={currentFlashcardIndex === flashcards.length - 1}
+                              className="flex-1 px-4 py-3 bg-[#F4C430] border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-200 disabled:cursor-not-allowed transition-all"
+                            >
+                              Next
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-
-              <button
-                onClick={() => {
-                  if (playerRef.current) {
-                    playerRef.current.dispose();
-                    playerRef.current = null;
-                  }
-                  if (videoUrl && videoUrl.startsWith("blob:")) {
-                    URL.revokeObjectURL(videoUrl);
-                  }
-                  setVideoUrl(null);
-                  setVideoId(null);
-                  setSubtitles([]);
-                  setCurrentSubtitle(null);
-                  setSearchQuery("");
-                  setSearchResults([]);
-                  setShowUploadForm(false);
-                }}
-                className="w-full px-4 py-2 bg-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
-              >
-                Back to Library
-              </button>
             </div>
 
             <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
