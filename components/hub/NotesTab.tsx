@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, FileText, Upload, FolderOpen, ChevronRight, Eye, RefreshCw } from "lucide-react";
+import { Search, FileText, Upload, FolderOpen, ChevronRight, Eye, RefreshCw, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "@/lib/supabase";
 
@@ -27,6 +27,7 @@ interface Note {
   unit: number;
   filename: string;
   file_url: string;
+  subject: string;
 }
 
 export default function NotesTab() {
@@ -37,14 +38,59 @@ export default function NotesTab() {
   const [selectedUnit, setSelectedUnit] = useState<number | null>(null);
   const [notes, setNotes] = useState<{ [key: number]: Note }>({});
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
 
   useEffect(() => {
-    if (selectedSubject) {
+    fetchUserRole();
+  }, []);
+
+  useEffect(() => {
+    if (userRole === "student") {
+      fetchAllAvailableNotes();
+    } else if (selectedSubject && userRole === "faculty") {
       fetchNotes(selectedSubject);
     } else {
       setNotes({});
     }
-  }, [selectedSubject]);
+  }, [selectedSubject, userRole]);
+
+  const fetchUserRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        
+        if (error) throw error;
+        setUserRole(data?.role || null);
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+    }
+  };
+
+  const fetchAllAvailableNotes = async () => {
+    setLoadingNotes(true);
+    try {
+      const { data, error } = await supabase
+        .from("notes")
+        .select("*")
+        .order("subject", { ascending: true })
+        .order("unit", { ascending: true });
+
+      if (error) throw error;
+      setAllNotes(data || []);
+    } catch (error) {
+      console.error("Error fetching all notes:", error);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
 
   const fetchNotes = async (subject: string) => {
     setLoadingNotes(true);
@@ -117,6 +163,107 @@ export default function NotesTab() {
     subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredNotes = allNotes.filter((note) => {
+    const matchesSearch = note.subject.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(note.unit);
+    return matchesSearch && matchesUnit;
+  });
+
+  const toggleUnitFilter = (unit: number) => {
+    setSelectedUnits((prev) =>
+      prev.includes(unit) ? prev.filter((u) => u !== unit) : [...prev, unit]
+    );
+  };
+
+  // Student View
+  if (userRole === "student") {
+    return (
+      <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-8 flex flex-col gap-6 shadow-[8px_8px_0px_#000] min-h-[75vh]">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-500" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search subjects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border-2 border-black bg-white focus:outline-none focus:shadow-[4px_4px_0px_#000] transition-all placeholder:text-gray-500 font-medium"
+            />
+          </div>
+          
+          <div className="flex gap-2 items-center">
+            <Filter className="h-5 w-5" />
+            <span className="font-bold text-sm">Units:</span>
+            {[1, 2, 3, 4, 5].map((unit) => (
+              <button
+                key={unit}
+                onClick={() => toggleUnitFilter(unit)}
+                className={`px-3 py-2 border-2 border-black font-bold text-sm transition-all ${
+                  selectedUnits.includes(unit)
+                    ? "bg-[#F4C430] shadow-[2px_2px_0px_#000]"
+                    : "bg-white hover:bg-gray-50"
+                }`}
+              >
+                {unit}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loadingNotes ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+            </div>
+          ) : filteredNotes.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
+              <div className="w-24 h-24 bg-[#F4C430] border-2 border-black rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_#000]">
+                <FileText className="h-10 w-10" />
+              </div>
+              <h3 className="text-2xl font-bold mb-2">No Notes Available</h3>
+              <p className="text-gray-600 max-w-xs">
+                {searchQuery || selectedUnits.length > 0
+                  ? "Try adjusting your filters"
+                  : "No study materials have been uploaded yet"}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredNotes.map((note) => (
+                <div
+                  key={note.id}
+                  className="border-2 border-black p-4 bg-[#f8f9fa] hover:bg-white transition-all hover:shadow-[4px_4px_0px_#000] hover:-translate-y-1"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-sm mb-1 line-clamp-2">{note.subject}</h3>
+                      <span className="text-xs text-gray-600 font-medium">Unit {note.unit}</span>
+                    </div>
+                    <span className="bg-[#A8D7B7] px-2 py-1 border border-black text-xs font-bold">
+                      PDF
+                    </span>
+                  </div>
+                  <a
+                    href={note.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full border-2 border-black bg-[#F4C430] hover:bg-[#ffcf40] text-black font-bold py-2 px-3 flex items-center justify-center gap-2 transition-transform hover:-translate-y-1 shadow-[2px_2px_0px_#000] hover:shadow-[4px_4px_0px_#000] text-sm"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Notes
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Faculty View
   return (
     <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-8 flex flex-col sm:flex-row gap-6 shadow-[8px_8px_0px_#000] min-h-[75vh]">
       {/* Left Panel: Subjects List */}
