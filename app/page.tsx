@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Sidebar from "@/components/Sidebar";
 import NotificationBell from "@/components/NotificationBell";
 import { Search, ArrowLeft, Play } from "lucide-react";
+import { gsap } from 'gsap';
 
 // Prevent static generation
 export const dynamic = 'force-dynamic';
@@ -46,10 +47,37 @@ export default function Home() {
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [alumniMentors, setAlumniMentors] = useState<AlumniMentor[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
+  
+  const headerRef = useRef<HTMLDivElement>(null);
+  const jumpBackRef = useRef<HTMLDivElement>(null);
+  const mentorsRef = useRef<HTMLDivElement>(null);
+  const postsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     checkAccess();
   }, []);
+
+  useEffect(() => {
+    if (!checking) {
+      // Animate elements from bottom with stagger
+      const elements = [headerRef.current, jumpBackRef.current, mentorsRef.current, postsRef.current].filter(Boolean);
+      
+      gsap.fromTo(
+        elements,
+        {
+          y: 100,
+          opacity: 0,
+        },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          ease: 'power3.out',
+          stagger: 0.15,
+        }
+      );
+    }
+  }, [checking]);
 
   const [user, setUser] = useState<any>(null);
 
@@ -192,8 +220,12 @@ export default function Home() {
       <main className="flex-1 sm:ml-56 pt-20 sm:pt-0 p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header - Hidden on mobile */}
-          <div className="hidden sm:flex bg-[#FFF7E4] border-2 border-black p-6 mb-6 shadow-[8px_8px_0px_#000] items-center justify-between">
-            <div className="flex-1 relative">
+          <div ref={headerRef} className="hidden sm:flex bg-[#FFF7E4] border-2 border-black p-6 mb-6 shadow-[8px_8px_0px_#000] items-center justify-between">
+            <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+
+            <div className="flex-1 mx-6 relative">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-500" />
               </div>
@@ -226,7 +258,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Left Column - Jump back in */}
             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-              <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
+              <div ref={jumpBackRef} className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
                 <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-4 sm:mb-6">Jump back in</h2>
 
                 {lastWatchedVideo ? (
@@ -306,7 +338,7 @@ export default function Home() {
               </div>
 
               {/* Alumni Mentors */}
-              <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
+              <div ref={mentorsRef} className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
                 <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight mb-3 sm:mb-4 text-center border-b-2 border-black pb-2 sm:pb-3">
                   Available Mentors
                 </h3>
@@ -367,7 +399,7 @@ export default function Home() {
             </div>
 
             {/* Right Column - Top Posts */}
-            <div className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
+            <div ref={postsRef} className="bg-[#FFF7E4] border-2 border-black p-4 sm:p-6 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
               <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight mb-3 sm:mb-4 text-center border-b-2 border-black pb-2 sm:pb-3">
                 Top Posts This Week
               </h3>

@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import VideoTab from "@/components/hub/VideoTab";
 import NotesTab from "@/components/hub/NotesTab";
 import MindmapTab from "@/components/hub/MindmapTab";
+import { gsap } from 'gsap';
 
 type TabType = "videos" | "notes" | "mindmap";
 
 export default function HubPage() {
   const [activeTab, setActiveTab] = useState<TabType>("videos");
   const router = useRouter();
+  
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const tabNavRef = useRef<HTMLDivElement>(null);
+  const tabContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     checkApprovalStatus();
@@ -23,7 +28,39 @@ export default function HubPage() {
     if (tab && ['videos', 'notes', 'mindmap'].includes(tab)) {
       setActiveTab(tab);
     }
+
+    // Initial page load animation - snappy and granular
+    const tl = gsap.timeline();
+    
+    tl.fromTo(
+      titleRef.current,
+      { y: 50, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
+    )
+    .fromTo(
+      tabNavRef.current,
+      { y: 40, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.45, ease: 'power2.out' },
+      '-=0.3'
+    )
+    .fromTo(
+      tabContentRef.current,
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
+      '-=0.25'
+    );
   }, []);
+
+  useEffect(() => {
+    // Animate tab content change - quick and snappy
+    if (tabContentRef.current) {
+      gsap.fromTo(
+        tabContentRef.current,
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' }
+      );
+    }
+  }, [activeTab]);
 
   const checkApprovalStatus = async () => {
     try {
@@ -52,10 +89,10 @@ export default function HubPage() {
       <Sidebar />
       <div className="flex-1 sm:ml-56 pt-20 sm:pt-0 py-4 sm:py-8 px-3 sm:px-4 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4 sm:mb-6 uppercase tracking-tight">Learning Hub</h1>
+          <h1 ref={titleRef} className="text-2xl sm:text-3xl font-black text-gray-900 mb-4 sm:mb-6 uppercase tracking-tight">Learning Hub</h1>
 
           {/* Tab Navigation */}
-          <div className="bg-[#FFF7E4] border-2 border-black mb-4 sm:mb-6 p-1 sm:p-2 flex gap-1 sm:gap-2 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
+          <div ref={tabNavRef} className="bg-[#FFF7E4] border-2 border-black mb-4 sm:mb-6 p-1 sm:p-2 flex gap-1 sm:gap-2 shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000]">
             <button
               onClick={() => setActiveTab("videos")}
               className={`flex-1 px-3 sm:px-6 py-2 sm:py-3 border-2 border-black font-bold text-xs sm:text-sm uppercase tracking-wider transition-all ${
@@ -89,7 +126,7 @@ export default function HubPage() {
           </div>
 
           {/* Tab Content */}
-          <div className="tab-content">
+          <div ref={tabContentRef} className="tab-content">
             {activeTab === "videos" && <VideoTab />}
             {activeTab === "notes" && <NotesTab />}
             {activeTab === "mindmap" && <MindmapTab />}
