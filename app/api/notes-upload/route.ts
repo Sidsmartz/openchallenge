@@ -1,8 +1,14 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
     try {
+        // Create supabase client inside the function
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
         const formData = await request.formData();
         const file = formData.get("file") as File;
         const subject = formData.get("subject") as string;

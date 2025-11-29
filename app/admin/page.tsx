@@ -8,6 +8,9 @@ import { useRouter } from 'next/navigation';
 import { Shield, TrendingUp, Users, MessageSquare, AlertTriangle, CheckCircle, XCircle, Ban, Search, Flag, UserX } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// Prevent static generation
+export const dynamic = 'force-dynamic';
+
 interface FlaggedPost {
   id: string;
   content: string;
