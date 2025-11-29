@@ -49,7 +49,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'moderation' | 'statistics' | 'chat-reports'>('moderation');
+  const [activeTab, setActiveTab] = useState<'moderation' | 'statistics' | 'chat-reports' | 'alumni-approval'>('moderation');
   const [chatReports, setChatReports] = useState<any[]>([]);
   const [flaggedPosts, setFlaggedPosts] = useState<FlaggedPost[]>([]);
   const [flaggedComments, setFlaggedComments] = useState<FlaggedComment[]>([]);
@@ -57,6 +57,7 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [stats, setStats] = useState<any>(null);
+  const [pendingAlumni, setPendingAlumni] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function AdminPage() {
       loadAllUsers();
       loadStatistics();
       loadChatReports();
+      loadPendingAlumni();
     }
   }, [isAdmin]);
 
@@ -205,6 +207,21 @@ export default function AdminPage() {
     }
   };
 
+  const loadPendingAlumni = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/pending-alumni', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      const data = await response.json();
+      setPendingAlumni(data.alumni || []);
+    } catch (error) {
+      console.error('Error loading pending alumni:', error);
+    }
+  };
+
   const handleChatReportAction = async (reportId: string, action: 'ban_chat' | 'ban_all' | 'dismiss', notes?: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -229,6 +246,32 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error processing chat report action:', error);
       toast.error('Failed to process action');
+    }
+  };
+
+  const handleAlumniApproval = async (alumniId: string, action: 'approve' | 'reject') => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/approve-alumni', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ alumniId, action }),
+      });
+
+      if (response.ok) {
+        toast.success(`Alumni ${action}d successfully`);
+        loadPendingAlumni();
+      } else {
+        toast.error(`Failed to ${action} alumni`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing alumni:`, error);
+      toast.error(`Failed to ${action} alumni`);
     }
   };
 
@@ -381,6 +424,19 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   Moderation
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('alumni-approval')}
+                className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                  activeTab === 'alumni-approval'
+                    ? 'bg-black text-white'
+                    : 'bg-white text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Alumni Approval ({pendingAlumni.length})
                 </div>
               </button>
               <button
@@ -749,6 +805,82 @@ export default function AdminPage() {
                         <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'alumni-approval' ? (
+            <div className="space-y-4">
+              {/* Alumni Approval */}
+              <div className="bg-white border-2 border-black rounded-lg p-4">
+                <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Pending Alumni Accounts ({pendingAlumni.length})
+                </h2>
+                <div className="space-y-3">
+                  {pendingAlumni.length === 0 ? (
+                    <p className="text-gray-600 text-sm text-center py-4">No pending alumni accounts</p>
+                  ) : (
+                    pendingAlumni.map((alumni) => (
+                      <div key={alumni.id} className="border-2 border-black rounded-lg p-4 bg-blue-50">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {alumni.avatar_url ? (
+                              <img src={alumni.avatar_url} alt={alumni.full_name} className="w-12 h-12 rounded-full border-2 border-black" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black">
+                                {alumni.full_name?.charAt(0).toUpperCase() || alumni.email.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold text-base">{alumni.full_name || alumni.email}</p>
+                              <p className="text-sm text-gray-600">{alumni.email}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Applied: {new Date(alumni.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3 mb-3 text-sm">
+                          {alumni.graduating_batch && (
+                            <div>
+                              <p className="text-gray-600 font-medium">Batch</p>
+                              <p className="text-gray-900">{alumni.graduating_batch}</p>
+                            </div>
+                          )}
+                          {alumni.current_company && (
+                            <div>
+                              <p className="text-gray-600 font-medium">Company</p>
+                              <p className="text-gray-900">{alumni.current_company}</p>
+                            </div>
+                          )}
+                          {alumni.current_job_title && (
+                            <div>
+                              <p className="text-gray-600 font-medium">Position</p>
+                              <p className="text-gray-900">{alumni.current_job_title}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 pt-3 border-t border-gray-300">
+                          <button
+                            onClick={() => handleAlumniApproval(alumni.id, 'approve')}
+                            className="flex-1 px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Approve Account
+                          </button>
+                          <button
+                            onClick={() => handleAlumniApproval(alumni.id, 'reject')}
+                            className="flex-1 px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

@@ -435,6 +435,7 @@ export type Database = {
       users: {
         Row: {
           ai_summary: string | null
+          approval_status: string | null
           available_for_mentorship: boolean | null
           avatar_url: string | null
           bio: string | null
@@ -464,6 +465,7 @@ export type Database = {
         }
         Insert: {
           ai_summary?: string | null
+          approval_status?: string | null
           available_for_mentorship?: boolean | null
           avatar_url?: string | null
           bio?: string | null
@@ -493,6 +495,7 @@ export type Database = {
         }
         Update: {
           ai_summary?: string | null
+          approval_status?: string | null
           available_for_mentorship?: boolean | null
           avatar_url?: string | null
           bio?: string | null

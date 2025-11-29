@@ -67,6 +67,23 @@ export default function Home() {
         return;
       }
 
+      // Check approval status for alumni
+      const { data: userData } = await supabase
+        .from('users')
+        .select('approval_status, role')
+        .eq('id', authUser.id)
+        .single();
+
+      if (userData && userData.role === 'alumni' && userData.approval_status === 'pending') {
+        router.push('/pending');
+        return;
+      }
+
+      if (userData && userData.role === 'alumni' && userData.approval_status === 'rejected') {
+        router.push('/pending');
+        return;
+      }
+
       setChecking(false);
 
       // Fetch last watched video and top posts

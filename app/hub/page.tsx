@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import VideoTab from "@/components/hub/VideoTab";
 import NotesTab from "@/components/hub/NotesTab";
@@ -10,6 +12,33 @@ type TabType = "videos" | "notes" | "mindmap";
 
 export default function HubPage() {
   const [activeTab, setActiveTab] = useState<TabType>("videos");
+  const router = useRouter();
+
+  useEffect(() => {
+    checkApprovalStatus();
+  }, []);
+
+  const checkApprovalStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('approval_status, role')
+        .eq('id', user.id)
+        .single();
+
+      if (userData && userData.role === 'alumni' && userData.approval_status !== 'approved') {
+        router.push('/pending');
+      }
+    } catch (error) {
+      console.error('Error checking approval status:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#9DC4AA] flex">

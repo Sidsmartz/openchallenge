@@ -77,7 +77,7 @@ export default function OnboardingPage() {
         setUserId(session.user.id);
         setUserEmail(session.user.email || null);
 
-        // Check domain access
+        // Check domain access (skip for potential alumni - they'll be handled by approval system)
         const response = await fetch('/api/check-domain', {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -85,8 +85,10 @@ export default function OnboardingPage() {
         });
         const data = await response.json();
         
-        if (!data.hasAccess) {
-          console.log("❌ Domain not allowed, redirecting to restricted page");
+        // Only redirect to restricted if it's a Gmail account without access
+        // Company emails (potential alumni) are allowed to proceed to onboarding
+        if (!data.hasAccess && session.user.email?.endsWith('@gmail.com')) {
+          console.log("❌ Gmail domain not allowed, redirecting to restricted page");
           router.push('/restricted');
           return;
         }
@@ -413,7 +415,7 @@ export default function OnboardingPage() {
   // Save preferences and complete onboarding
   const handleComplete = async () => {
     console.log("🎯 handleComplete called");
-    console.log("📊 Current state:", { userId, preferences });
+    console.log("📊 Current state:", { userId, preferences, role });
 
     if (!userId) {
       console.warn("⚠️ Missing userId:", userId);
@@ -428,12 +430,22 @@ export default function OnboardingPage() {
 
     setIsSubmitting(true);
     try {
-      const updateData = {
+      // Check if user is alumni with non-gmail email
+      const isAlumniNonGmail = role === 'alumni' && userEmail && !userEmail.endsWith('@gmail.com');
+      
+      const updateData: any = {
         theme: preferences.theme,
         smart_search: preferences.smartSearch,
         ai_summary: preferences.aiSummary,
         gamification: preferences.gamification,
       };
+
+      // Set approval status for alumni with company emails
+      if (isAlumniNonGmail) {
+        updateData.approval_status = 'pending';
+      } else {
+        updateData.approval_status = 'approved';
+      }
 
       console.log("📤 Updating preferences:", updateData);
 
@@ -453,9 +465,13 @@ export default function OnboardingPage() {
         localStorage.removeItem("onboarding_role");
         setOnboardingComplete(true);
         
-        // Redirect after showing success message
+        // Redirect based on approval status
         setTimeout(() => {
-          router.push("/");
+          if (isAlumniNonGmail) {
+            router.push("/pending");
+          } else {
+            router.push("/");
+          }
         }, 2000);
       }
     } catch (err) {

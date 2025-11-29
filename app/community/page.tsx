@@ -79,15 +79,20 @@ export default function CommunityPage() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
     
-    // Check if user is banned
+    // Check if user is banned and approval status
     if (user) {
       const { data: userData } = await supabase
         .from('users')
-        .select('is_banned')
+        .select('is_banned, approval_status, role')
         .eq('id', user.id)
         .single();
       
       setIsBanned((userData as any)?.is_banned || false);
+      
+      // Redirect alumni with pending/rejected status
+      if (userData && userData.role === 'alumni' && userData.approval_status !== 'approved') {
+        router.push('/pending');
+      }
     }
   };
 

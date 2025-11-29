@@ -10,8 +10,8 @@ export default function DomainProtection({ children }: { children: React.ReactNo
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Skip check for login, restricted, and onboarding pages (onboarding handles its own check)
-    if (pathname === '/login' || pathname === '/restricted' || pathname === '/onboarding') {
+    // Skip check for landing, login, restricted, onboarding, and pending pages
+    if (pathname === '/landing' || pathname === '/login' || pathname === '/restricted' || pathname === '/onboarding' || pathname === '/pending') {
       setChecking(false);
       return;
     }
@@ -24,13 +24,13 @@ export default function DomainProtection({ children }: { children: React.ReactNo
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        router.push('/login');
+        router.push('/onboarding');
         return;
       }
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/login');
+        router.push('/onboarding');
         return;
       }
 
@@ -54,7 +54,7 @@ export default function DomainProtection({ children }: { children: React.ReactNo
     }
   };
 
-  if (checking && pathname !== '/login' && pathname !== '/restricted' && pathname !== '/onboarding') {
+  if (checking && pathname !== '/landing' && pathname !== '/login' && pathname !== '/restricted' && pathname !== '/onboarding' && pathname !== '/pending') {
     return (
       <div className="flex min-h-screen bg-[#F5F1E8] items-center justify-center">
         <p className="text-gray-700">Verifying access...</p>
