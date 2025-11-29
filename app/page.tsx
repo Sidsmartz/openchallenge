@@ -193,11 +193,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           {/* Header - Hidden on mobile */}
           <div className="hidden sm:flex bg-[#FFF7E4] border-2 border-black p-6 mb-6 shadow-[8px_8px_0px_#000] items-center justify-between">
-            <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-
-            <div className="flex-1 mx-6 relative">
+            <div className="flex-1 relative">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-500" />
               </div>
