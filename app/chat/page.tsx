@@ -436,10 +436,10 @@ export default function ChatPage() {
       <Sidebar />
       <Toaster position="top-right" richColors />
       
-      <div className="flex-1 sm:ml-56 pt-16 sm:pt-0 flex">
+      <div className="flex-1 sm:ml-56 pt-16 sm:pt-0 flex h-[calc(100vh-4rem)] sm:h-screen">
         {/* Conversations List - Hidden on mobile when chat is selected */}
-        <div className={`${selectedConversation ? 'hidden sm:flex' : 'flex'} w-full sm:w-72 bg-white sm:border-r-2 border-black h-[calc(100vh-4rem)] sm:h-screen overflow-y-auto flex-col`}>
-          <div className="px-3 sm:px-4 py-3 sm:py-4 border-b-2 border-black flex items-center bg-[#F4C430]">
+        <div className={`${selectedConversation ? 'hidden sm:flex' : 'flex'} w-full sm:w-72 bg-white sm:border-r-2 border-black flex-col`}>
+          <div className="px-3 sm:px-4 py-3 sm:py-4 border-b-2 border-black flex items-center bg-[#F4C430] flex-shrink-0">
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2 sm:gap-3">
                 <button
@@ -460,7 +460,7 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
+          <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1.5 sm:space-y-2">
             {loading ? (
               <p className="text-center text-gray-600 py-4 sm:py-6 text-xs sm:text-sm">Loading...</p>
             ) : conversations.length === 0 ? (
@@ -507,11 +507,11 @@ export default function ChatPage() {
         </div>
 
         {/* Chat Area - Full screen on mobile when selected */}
-        <div className={`${selectedConversation ? 'flex' : 'hidden sm:flex'} flex-1 flex-col`}>
+        <div className={`${selectedConversation ? 'flex' : 'hidden sm:flex'} flex-1 flex-col h-full`}>
           {selectedConv && selectedConv.otherUser ? (
             <>
               {/* Chat Header */}
-              <div className="bg-white border-b-2 border-black px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+              <div className="bg-white border-b-2 border-black px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   {/* Back button on mobile */}
                   <button
@@ -569,7 +569,7 @@ export default function ChatPage() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 min-h-0">
                 {blockedUsers.includes(selectedConv.otherUser?.id || '') && (
                   <div className="bg-orange-100 border-2 border-orange-600 rounded-lg p-2 sm:p-3 text-center">
                     <p className="text-xs sm:text-sm text-orange-800 font-medium">
@@ -653,7 +653,7 @@ export default function ChatPage() {
               </div>
 
               {/* Message Input */}
-              <form onSubmit={handleSendMessage} className="bg-white border-t-2 border-black p-3">
+              <form onSubmit={handleSendMessage} className="bg-white border-t-2 border-black p-3 flex-shrink-0">
                 {isChatBanned && (
                   <div className="mb-2 p-3 bg-red-100 border-2 border-red-600 rounded-lg">
                     <p className="text-sm text-red-800 font-bold">
