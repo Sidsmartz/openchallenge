@@ -173,17 +173,19 @@ export default function Home() {
 
             <div className="flex gap-3">
               <NotificationBell />
-              {user?.user_metadata?.avatar_url ? (
-                <img
-                  src={user.user_metadata.avatar_url}
-                  alt="Profile"
-                  className="w-12 h-12 rounded-full border-2 border-black object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              )}
+              <button onClick={() => user?.id && router.push(`/profile/${user.id}`)}>
+                {user?.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="Profile"
+                    className="w-12 h-12 rounded-full border-2 border-black object-cover hover:opacity-80 transition-opacity"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-blue-600 border-2 border-black rounded-full flex items-center justify-center text-white font-bold hover:opacity-80 transition-opacity">
+                    {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
             </div>
           </div>
 

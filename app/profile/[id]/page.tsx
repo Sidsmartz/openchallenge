@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Edit, Plus, X, Briefcase, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Edit, Plus, X, Briefcase, Link as LinkIcon, Check } from 'lucide-react';
 
 interface WorkExperience {
   id: string;
@@ -118,21 +118,39 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
+      // Skills is an ARRAY type in database
+      const skillsArray = typeof editedProfile.skills === 'string'
+        ? editedProfile.skills.split(',').map(s => s.trim()).filter(Boolean)
+        : (Array.isArray(editedProfile.skills) ? editedProfile.skills : []);
+
+      // Interests is a TEXT type in database (comma-separated string)
+      const interestsString = typeof editedProfile.interests === 'string'
+        ? editedProfile.interests.trim()
+        : (Array.isArray(editedProfile.interests) ? editedProfile.interests.join(', ') : '');
+
+      // Ensure data is properly formatted
+      const updateData = {
+        bio: editedProfile.bio || null,
+        skills: skillsArray,
+        interests: interestsString || null,
+        role: editedProfile.role || null,
+      };
+
+      console.log('Saving profile data:', updateData);
+
       const { error } = await supabase
         .from('users')
-        .update({
-          bio: editedProfile.bio,
-          skills: editedProfile.skills,
-          interests: editedProfile.interests,
-          role: editedProfile.role,
-        })
+        .update(updateData)
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       toast.success('Profile updated successfully');
       setIsEditing(false);
-      loadProfile();
+      await loadProfile(); // Wait for reload to complete
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
@@ -179,6 +197,19 @@ export default function ProfilePage() {
 
   const handleAddSocial = async () => {
     try {
+      // Validate URL
+      if (!newSocial.url || !newSocial.platform) {
+        toast.error('Please fill in both platform and URL');
+        return;
+      }
+
+      // Basic URL validation
+      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+      if (!urlPattern.test(newSocial.url)) {
+        toast.error('Please enter a valid URL');
+        return;
+      }
+
       const { error } = await (supabase as any)
         .from('socials')
         .insert({
@@ -200,7 +231,7 @@ export default function ProfilePage() {
 
   const handleDeleteSocial = async (socialId: string) => {
     try {
-      const { error} = await (supabase as any)
+      const { error } = await (supabase as any)
         .from('socials')
         .delete()
         .eq('id', socialId);
@@ -245,7 +276,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F5F1E8] flex">
       <Sidebar />
       <Toaster position="top-right" richColors />
-      
+
       <div className="flex-1 ml-56 p-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
@@ -276,17 +307,59 @@ export default function ProfilePage() {
                       {profileUser.full_name?.charAt(0).toUpperCase() || profileUser.email.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  
+
                   <h2 className="text-2xl font-bold text-gray-900 text-center mb-1">
                     {profileUser.full_name || profileUser.email}
                   </h2>
                   <p className="text-sm text-gray-700 mb-2">{profileUser.email}</p>
-                  
+
                   {profileUser.role && (
                     <span className="px-3 py-1 bg-black text-white text-sm rounded-full mb-4">
                       {profileUser.role.charAt(0).toUpperCase() + profileUser.role.slice(1)}
                     </span>
                   )}
+
+                  {/* XP & Level */}
+                  <div className="w-full mb-6 px-2">
+                    <div className="flex justify-between items-end mb-2">
+                      <div className="text-center">
+                        <span className="block text-2xl font-black">
+                          {profileUser.xp || 0}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                          XP
+                        </span>
+                      </div>
+
+                      <div className="text-center">
+                        <span className="block text-2xl font-black">
+                          Lvl {Math.floor((profileUser.xp || 0) / 100) + 1}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                          Level
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stylish XP Bar */}
+                    <div className="relative h-4 bg-white border-2 border-black rounded-full shadow-[2px_2px_0px_#000] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-red-500 via-red-400 to-red-600 transition-all duration-500 shadow-[inset_0_0_6px_rgba(0,0,0,0.5)]"
+                        style={{
+                          width: `${((profileUser.xp || 0) % 100)}%`,
+                        }}
+                      />
+
+                      {/* Metallic grid highlight */}
+                      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,#000_6px,#000_12px)]" />
+                    </div>
+
+                    <p className="text-center text-[11px] font-bold mt-1 text-gray-700">
+                      {100 - ((profileUser.xp || 0) % 100)} XP to next level
+                    </p>
+                  </div>
+
+
 
                   {/* Socials */}
                   {socials.length > 0 && (
@@ -294,11 +367,11 @@ export default function ProfilePage() {
                       {socials.map((social) => (
                         <a
                           key={social.id}
-                          href={social.url}
+                          href={social.url.startsWith('http') ? social.url : `https://${social.url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-2 bg-white border-2 border-black rounded shadow-[2px_2px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
-                          title={social.platform}
+                          title={`${social.platform}: ${social.url}`}
                         >
                           <LinkIcon className="w-4 h-4" />
                         </a>
@@ -309,13 +382,24 @@ export default function ProfilePage() {
                   {/* Action Buttons */}
                   <div className="w-full space-y-2">
                     {isOwnProfile ? (
-                      <button
-                        onClick={() => setIsEditing(!isEditing)}
-                        className="w-full px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        {isEditing ? 'Cancel Edit' : 'Edit Profile'}
-                      </button>
+                      <>
+                        {isEditing && (
+                          <button
+                            onClick={handleSaveProfile}
+                            className="w-full px-4 py-2 bg-[#A8D7B7] border-2 border-black font-bold shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all flex items-center justify-center gap-2 mb-2"
+                          >
+                            <Check className="w-5 h-5" />
+                            Save Changes
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setIsEditing(!isEditing)}
+                          className={`w-full px-4 py-2 rounded border-2 border-black font-bold shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all flex items-center justify-center gap-2 ${isEditing ? 'bg-white hover:bg-gray-50' : 'bg-black text-white hover:bg-gray-800'}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                          {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+                        </button>
+                      </>
                     ) : (
                       <button
                         onClick={handleStartChat}
@@ -351,8 +435,8 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={Array.isArray(editedProfile.skills) ? editedProfile.skills.join(', ') : ''}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, skills: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    value={Array.isArray(editedProfile.skills) ? editedProfile.skills.join(', ') : (typeof editedProfile.skills === 'string' ? editedProfile.skills : '')}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, skills: e.target.value })}
                     placeholder="JavaScript, React, Node.js..."
                     className="w-full px-3 py-2 border-2 border-black rounded text-sm"
                   />
@@ -377,17 +461,17 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={Array.isArray(editedProfile.interests) ? editedProfile.interests.join(', ') : ''}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, interests: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    value={editedProfile.interests || ''}
+                    onChange={(e) => setEditedProfile({ ...editedProfile, interests: e.target.value })}
                     placeholder="Coding, Music, Travel..."
                     className="w-full px-3 py-2 border-2 border-black rounded text-sm"
                   />
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {profileUser.interests && Array.isArray(profileUser.interests) && profileUser.interests.length > 0 ? (
-                      profileUser.interests.map((interest: string, i: number) => (
+                    {profileUser.interests && profileUser.interests.trim() ? (
+                      profileUser.interests.split(',').map((interest: string, i: number) => (
                         <span key={i} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded border border-green-300">
-                          {interest}
+                          {interest.trim()}
                         </span>
                       ))
                     ) : (
@@ -397,14 +481,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {isEditing && (
-                <button
-                  onClick={handleSaveProfile}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                >
-                  Save Changes
-                </button>
-              )}
+
             </div>
 
             {/* Right Column - Work Experience & Socials */}
@@ -432,7 +509,7 @@ export default function ProfilePage() {
                     <p className="text-sm text-gray-500 text-center py-4">No work experience added</p>
                   ) : (
                     workExperience.map((work) => (
-                      <div 
+                      <div
                         key={work.id}
                         className="group border-2 border-black rounded p-3 bg-[#FFF7E4] shadow-[2px_2px_0px_#000] cursor-pointer transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
                       >

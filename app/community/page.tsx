@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Toaster, toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
-import { ArrowLeft, Search, Filter, MessageCircle, User, Ban } from 'lucide-react';
+import { ArrowLeft, Search, Filter, MessageCircle, User, Ban, Upload, FileText, Flag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Post {
@@ -41,12 +41,21 @@ export default function CommunityPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [isBanned, setIsBanned] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'resources' | 'people'>('posts');
+  const [resources, setResources] = useState<any[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('');
+  const [uploading, setUploading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     checkUser();
     loadPosts();
     loadUsers();
+    loadResources();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -66,14 +75,15 @@ export default function CommunityPage() {
   }, [posts.length]);
 
   useEffect(() => {
-    loadPosts();
+    if (activeTab === 'posts') {
+      loadPosts();
+    } else if (activeTab === 'resources') {
+      loadResources();
+    } else if (activeTab === 'people') {
+      loadUsers();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filterTags]);
-
-  useEffect(() => {
-    loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userSearchQuery]);
+  }, [searchQuery, filterTags, activeTab]);
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -117,7 +127,7 @@ export default function CommunityPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const params = new URLSearchParams();
-      if (userSearchQuery) params.append('search', userSearchQuery);
+      if (searchQuery) params.append('search', searchQuery);
       
       const response = await fetch(`/api/users?${params.toString()}`, {
         headers: session ? { 'Authorization': `Bearer ${session.access_token}` } : {},
@@ -328,6 +338,114 @@ export default function CommunityPage() {
     }
   };
 
+  const loadResources = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (filterTags.length > 0) params.append('tags', filterTags.join(','));
+      
+      const response = await fetch(`/api/resources?${params.toString()}`);
+      const data = await response.json();
+      setResources(data.resources || []);
+    } catch (error) {
+      console.error('Error loading resources:', error);
+    }
+  };
+
+  const handleUploadResource = async () => {
+    if (!uploadFile || !uploadTitle.trim()) {
+      toast.error('Please provide a title and select a file');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to upload');
+        return;
+      }
+
+      // Upload file to storage
+      const fileExt = uploadFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `resources/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('resources')
+        .upload(filePath, uploadFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('resources')
+        .getPublicUrl(filePath);
+
+      // Create resource record
+      const response = await fetch('/api/resources', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          title: uploadTitle,
+          description: uploadDescription,
+          category: uploadCategory,
+          file_url: publicUrl,
+          file_name: uploadFile.name,
+          file_type: uploadFile.type,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Resource uploaded successfully!');
+        setShowUploadModal(false);
+        setUploadFile(null);
+        setUploadTitle('');
+        setUploadDescription('');
+        setUploadCategory('');
+        loadResources();
+      } else {
+        toast.error('Failed to upload resource');
+      }
+    } catch (error) {
+      console.error('Error uploading resource:', error);
+      toast.error('Failed to upload resource');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFlagResource = async (resourceId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to flag');
+        return;
+      }
+
+      const response = await fetch('/api/resources/flag', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ resourceId }),
+      });
+
+      if (response.ok) {
+        toast.success('Resource flagged for review');
+        loadResources();
+      } else {
+        toast.error('Failed to flag resource');
+      }
+    } catch (error) {
+      console.error('Error flagging resource:', error);
+      toast.error('Failed to flag resource');
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-[#F5F1E8] flex">
@@ -349,7 +467,7 @@ export default function CommunityPage() {
       <Toaster position="top-right" richColors />
       
       {/* Main Content */}
-      <div className="flex-1 ml-56 mr-72 p-4">
+      <div className="flex-1 ml-56 p-4">
         <div className="max-w-4xl mx-auto">
           {/* Banned User Warning */}
           {isBanned && (
@@ -381,7 +499,11 @@ export default function CommunityPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="text"
-                    placeholder="Search posts..."
+                    placeholder={
+                      activeTab === 'posts' ? 'Search posts...' :
+                      activeTab === 'resources' ? 'Search resources...' :
+                      'Search people...'
+                    }
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border-2 border-black rounded bg-white text-sm"
@@ -389,81 +511,126 @@ export default function CommunityPage() {
                 </div>
               </div>
 
-              {user.user_metadata?.avatar_url ? (
-                <img 
-                  src={user.user_metadata.avatar_url} 
-                  alt="Profile"
-                  className="w-9 h-9 rounded-full border-2 border-black object-cover"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                  {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
+              <button
+                onClick={() => router.push(`/profile/${user.id}`)}
+                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                title="View your profile"
+              >
+                {user.user_metadata?.avatar_url ? (
+                  <img 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Profile"
+                    className="w-9 h-9 rounded-full border-2 border-black object-cover"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                    {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {/* Community Title and Tabs */}
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl font-bold text-gray-900">Community</h1>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('posts')}
+                  className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                    activeTab === 'posts'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  Posts
+                </button>
+                <button
+                  onClick={() => setActiveTab('resources')}
+                  className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                    activeTab === 'resources'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  Resources
+                </button>
+                <button
+                  onClick={() => setActiveTab('people')}
+                  className={`px-4 py-2 rounded border-2 border-black transition-colors ${
+                    activeTab === 'people'
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  People
+                </button>
+              </div>
+              {activeTab !== 'people' && (
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowFilterMenu(!showFilterMenu)}
+                    className="px-3 py-1.5 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex items-center gap-2 text-sm"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filter
+                    {filterTags.length > 0 && (
+                      <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {filterTags.length}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {/* Filter Dropdown */}
+                  {showFilterMenu && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-black rounded-lg shadow-lg p-3 z-10">
+                      <h3 className="font-bold mb-2 text-sm">Filter by {activeTab === 'posts' ? 'Tags' : 'Category'}</h3>
+                      <div className="space-y-1.5">
+                        {AVAILABLE_TAGS.map(tag => (
+                          <label key={tag} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={filterTags.includes(tag)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterTags([...filterTags, tag]);
+                                } else {
+                                  setFilterTags(filterTags.filter(t => t !== tag));
+                                }
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm">{tag}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => setFilterTags([])}
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={() => setShowFilterMenu(false)}
+                          className="flex-1 px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Community Title and Filter */}
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-gray-900">Community</h1>
-              <div className="relative">
-                <button 
-                  onClick={() => setShowFilterMenu(!showFilterMenu)}
-                  className="px-3 py-1.5 border-2 border-black rounded hover:bg-black hover:text-white transition-colors flex items-center gap-2 text-sm"
-                >
-                  <Filter className="w-4 h-4" />
-                  Filter
-                  {filterTags.length > 0 && (
-                    <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {filterTags.length}
-                    </span>
-                  )}
-                </button>
-                
-                {/* Filter Dropdown */}
-                {showFilterMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-black rounded-lg shadow-lg p-3 z-10">
-                    <h3 className="font-bold mb-2 text-sm">Filter by Tags</h3>
-                    <div className="space-y-1.5">
-                      {AVAILABLE_TAGS.map(tag => (
-                        <label key={tag} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={filterTags.includes(tag)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFilterTags([...filterTags, tag]);
-                              } else {
-                                setFilterTags(filterTags.filter(t => t !== tag));
-                              }
-                            }}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-sm">{tag}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => setFilterTags([])}
-                        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
-                      >
-                        Clear
-                      </button>
-                      <button
-                        onClick={() => setShowFilterMenu(false)}
-                        className="flex-1 px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
-          {/* All Posts Feed */}
-          <div className="space-y-4">
+          {/* Posts Tab */}
+          {activeTab === 'posts' && (
+            <div className="space-y-4">
             {loading ? (
               <div className="text-center py-8">
                 <p className="text-gray-700 text-sm">Loading posts...</p>
@@ -638,143 +805,143 @@ export default function CommunityPage() {
               ))
             )}
           </div>
-        </div>
+          )}
 
-        {/* Right Sidebar */}
-        <div className="fixed right-0 top-0 h-screen w-72 bg-white border-l-2 border-black overflow-y-auto shadow-[-4px_0px_0px_#000]">
-          {/* Top Posts Section - Fixed at top */}
-          <div className="p-4 border-b-2 border-black bg-[#F4C430]">
-            <h2 className="text-xl font-bold mb-3 text-gray-900">Top Posts This Week</h2>
-            <div className="space-y-2">
-              {loading ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 text-xs">Loading...</p>
-                </div>
-              ) : posts.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 text-xs">No posts yet</p>
+          {/* Resources Tab */}
+          {activeTab === 'resources' && (
+            <div className="space-y-4">
+              {/* Upload Button */}
+              {!isBanned && (
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="w-full px-4 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                >
+                  + Upload Resource
+                </button>
+              )}
+
+              {/* Resources List */}
+              {resources.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-700 text-sm">No resources yet. Be the first to share!</p>
                 </div>
               ) : (
-                posts.slice(0, 3).map((post) => (
-                  <div key={post.id} className="bg-white border-2 border-black rounded p-2 hover:bg-gray-50 transition-colors shadow-[2px_2px_0px_#000]">
-                    <div className="flex items-start gap-2">
-                      <button
-                        onClick={() => router.push(`/profile/${post.user.id}`)}
-                        className="flex-shrink-0"
-                      >
-                        {post.user.avatar_url ? (
-                          <img 
-                            src={post.user.avatar_url} 
-                            alt={post.user.full_name}
-                            className="w-8 h-8 rounded-full border-2 border-black object-cover hover:opacity-80 transition-opacity"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full border-2 border-black bg-blue-600 flex items-center justify-center text-white font-bold text-xs hover:opacity-80 transition-opacity">
-                            {post.user.full_name.charAt(0).toUpperCase()}
-                          </div>
+                resources.map((resource) => (
+                  <div key={resource.id} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg mb-1">{resource.title}</h3>
+                        {resource.description && (
+                          <p className="text-sm text-gray-700 mb-2">{resource.description}</p>
                         )}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <button
-                          onClick={() => router.push(`/profile/${post.user.id}`)}
-                          className="font-semibold text-gray-900 text-xs hover:underline text-left"
-                        >
-                          {post.user.full_name}
-                        </button>
-                        <p className="text-xs text-gray-700 line-clamp-2">{post.content}</p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                          <span>❤️ {post.likes_count}</span>
-                          <span>💬 {post.comments_count}</span>
-                        </div>
+                        {resource.category && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                            {resource.category}
+                          </span>
+                        )}
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+                      <span>{resource.user?.full_name}</span>
+                      <span>•</span>
+                      <span>{new Date(resource.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={resource.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-center text-sm"
+                      >
+                        View/Download
+                      </a>
+                      <button
+                        onClick={() => handleFlagResource(resource.id)}
+                        className="px-4 py-2 border-2 border-red-600 text-red-600 rounded hover:bg-red-50 transition-colors text-sm"
+                      >
+                        Report
+                      </button>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </div>
+          )}
 
-          {/* People Section - Scrollable */}
-          <div className="p-4">
-            <h2 className="text-xl font-bold mb-3 text-gray-900">People</h2>
-            
-            {/* User Search */}
-            <div className="relative mb-3">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search people..."
-                value={userSearchQuery}
-                onChange={(e) => setUserSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 border-2 border-black rounded bg-white text-sm"
-              />
-            </div>
+          {/* People Tab */}
+          {activeTab === 'people' && (
+            <div className="space-y-4">
+              {/* User List */}
+              <div className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_#000]">
+                <h2 className="text-xl font-bold mb-3 text-gray-900">Find People</h2>
 
-            {/* Users List */}
-            <div className="space-y-2">
-              {users.map((user) => (
-                <div 
-                  key={user.id} 
-                  onClick={() => router.push(`/profile/${user.id}`)}
-                  className="bg-white border-2 border-black rounded-lg p-2.5 shadow-[2px_2px_0px_#000] cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {user.avatar_url ? (
-                      <img 
-                        src={user.avatar_url} 
-                        alt={user.full_name}
-                        className="w-9 h-9 rounded-full object-cover border-2 border-black"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold border-2 border-black">
-                        {user.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                {/* Users List */}
+                <div className="space-y-2">
+                  {users.map((user) => (
+                    <div 
+                      key={user.id} 
+                      onClick={() => router.push(`/profile/${user.id}`)}
+                      className="bg-gray-50 border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        {user.avatar_url ? (
+                          <img 
+                            src={user.avatar_url} 
+                            alt={user.full_name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-black"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-black">
+                            {user.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">
+                            {user.full_name || user.email}
+                          </p>
+                          {user.full_name && (
+                            <p className="text-xs text-gray-600 truncate">{user.email}</p>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate text-sm">
-                        {user.full_name || user.email}
-                      </p>
-                      {user.full_name && (
-                        <p className="text-xs text-gray-600 truncate">{user.email}</p>
-                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartChat(user.id);
+                          }}
+                          className="flex-1 px-3 py-2 bg-white border-2 border-black text-black text-sm rounded hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          Chat
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/profile/${user.id}`);
+                          }}
+                          className="px-3 py-2 border-2 border-black text-black text-sm rounded hover:bg-gray-100 transition-colors"
+                          title="View Profile"
+                        >
+                          <User className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartChat(user.id);
-                      }}
-                      className="flex-1 px-2 py-1.5 bg-black text-white text-xs rounded hover:bg-gray-800 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Chat
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/profile/${user.id}`);
-                      }}
-                      className="px-2 py-1.5 border-2 border-black text-black text-xs rounded hover:bg-gray-100 transition-colors"
-                      title="View Profile"
-                    >
-                      <User className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  ))}
+                  {users.length === 0 && (
+                    <p className="text-center text-gray-600 py-6 text-sm">No users found</p>
+                  )}
                 </div>
-              ))}
-              {users.length === 0 && (
-                <p className="text-center text-gray-600 py-6 text-sm">No users found</p>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Floating Create Post Button */}
-        {!isBanned && (
+        {!isBanned && activeTab !== 'people' && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="fixed bottom-6 right-[19rem] w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-2xl z-10"
+            className="fixed bottom-6 right-6 w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center text-2xl z-10"
           >
             +
           </button>
@@ -861,6 +1028,98 @@ export default function CommunityPage() {
                   {submitting ? 'Posting...' : 'Post'}
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Upload Resource Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-gray-200 bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 border-2 border-black shadow-[4px_4px_0px_#000]">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Upload Resource</h2>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadFile(null);
+                    setUploadTitle('');
+                    setUploadDescription('');
+                    setUploadCategory('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                    placeholder="Resource title..."
+                    className="w-full px-3 py-2 border-2 border-black rounded text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={uploadDescription}
+                    onChange={(e) => setUploadDescription(e.target.value)}
+                    placeholder="Brief description..."
+                    className="w-full px-3 py-2 border-2 border-black rounded text-sm resize-none"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={uploadCategory}
+                    onChange={(e) => setUploadCategory(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-black rounded text-sm"
+                  >
+                    <option value="">Select category...</option>
+                    {AVAILABLE_TAGS.map(tag => (
+                      <option key={tag} value={tag}>{tag}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    File * (PDF, DOC, DOCX, PPT, PPTX)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="text-sm text-gray-600"
+                  />
+                  {uploadFile && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleUploadResource}
+                  disabled={uploading || !uploadFile || !uploadTitle.trim()}
+                  className="w-full px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 transition-colors font-medium"
+                >
+                  {uploading ? 'Uploading...' : 'Upload Resource'}
+                </button>
+              </div>
             </div>
           </div>
         )}
