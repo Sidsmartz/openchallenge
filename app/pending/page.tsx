@@ -24,7 +24,7 @@ export default function PendingApprovalPage() {
       const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (!authUser) {
-        router.push('/login');
+        router.push('/onboarding');
         return;
       }
 
@@ -59,7 +59,7 @@ export default function PendingApprovalPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/onboarding');
   };
 
   if (loading) {

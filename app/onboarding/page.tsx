@@ -493,17 +493,17 @@ export default function OnboardingPage() {
   // Show standalone login screen if user is not authenticated
   if (!userId) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-8">
-        <div className="w-[90%] max-w-[1200px] h-[85vh] bg-[#FFF7E4] border-2 border-black p-12 flex justify-center items-center">
-          <div className="w-[700px] bg-[#F4C430] shadow-[8px_8px_0px_#000] border-2 border-black p-12">
-            <div className="flex flex-col items-center justify-center gap-6">
-              <h1 className="text-3xl font-bold text-center">Welcome!</h1>
-              <p className="text-center text-[#333] mb-4">
+      <div className="flex justify-center items-center min-h-screen bg-[#A8D7B7] p-4 sm:p-8">
+        <div className="w-full sm:w-[90%] max-w-[1200px] min-h-[85vh] bg-[#FFF7E4] border-2 border-black p-6 sm:p-12 flex justify-center items-center">
+          <div className="w-full sm:w-[700px] bg-[#F4C430] shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] border-2 border-black p-6 sm:p-12">
+            <div className="flex flex-col items-center justify-center gap-4 sm:gap-6">
+              <h1 className="text-2xl sm:text-3xl font-bold text-center">Welcome!</h1>
+              <p className="text-center text-sm sm:text-base text-[#333] mb-2 sm:mb-4">
                 Sign in with your Google account to get started
               </p>
               <button
                 onClick={handleGoogleSignIn}
-                className="flex items-center gap-3 bg-white border-2 border-[#333] rounded-lg px-8 py-4 hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_#000]"
+                className="flex items-center gap-2 sm:gap-3 bg-white border-2 border-[#333] rounded-lg px-6 sm:px-8 py-3 sm:py-4 hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_#000]"
               >
                 <svg
                   className="w-6 h-6"
@@ -581,7 +581,7 @@ export default function OnboardingPage() {
                   Choose Your Role
                 </h2>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   {[
                     {
                       value: "student",
@@ -602,16 +602,16 @@ export default function OnboardingPage() {
                     <button
                       key={option.value}
                       onClick={() => setRole(option.value)}
-                      className={`flex-1 px-4 py-6 border-2 border-black font-bold uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-2 ${
+                      className={`flex-1 px-4 py-4 sm:py-6 border-2 border-black font-bold uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-1 sm:gap-2 ${
                         role === option.value
-                          ? "bg-[#6B9BD1] text-white shadow-[4px_4px_0px_#000] translate-x-[-2px] translate-y-[-2px]"
-                          : "bg-white hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000]"
+                          ? "bg-[#6B9BD1] text-white shadow-[2px_2px_0px_#000] sm:shadow-[4px_4px_0px_#000] translate-x-[-1px] translate-y-[-1px] sm:translate-x-[-2px] sm:translate-y-[-2px]"
+                          : "bg-white hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] sm:hover:shadow-[4px_4px_0px_#000]"
                       }`}
                     >
-                      <div className="text-sm">
+                      <div className="text-xs sm:text-sm">
                         {option.title}
                       </div>
-                      <div className={`text-[0.65rem] normal-case font-normal leading-tight ${
+                      <div className={`text-[0.6rem] sm:text-[0.65rem] normal-case font-normal leading-tight ${
                         role === option.value ? "text-white/90" : "text-[#666]"
                       }`}>
                         {option.desc}
