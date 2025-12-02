@@ -220,7 +220,7 @@ export default function Home() {
       <main className="flex-1 sm:ml-56 pt-20 sm:pt-0 p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header - Hidden on mobile */}
-          <div ref={headerRef} className="hidden sm:flex bg-[#FFF7E4] border-2 border-black p-6 mb-6 shadow-[8px_8px_0px_#000] items-center justify-between">
+          <div ref={headerRef} className="hidden sm:flex bg-[#FFF7E4] border-2 border-black p-6 mb-6 shadow-[8px_8px_0px_#000] items-center justify-between relative z-[9999]">
             <button className="p-3 bg-white border-2 border-black hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] transition-all">
               <ArrowLeft className="w-5 h-5" />
             </button>

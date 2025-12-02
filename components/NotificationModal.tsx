@@ -150,7 +150,7 @@ export default function NotificationModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 z-40"
+            className="fixed inset-0 bg-black/20 z-[9998]"
           />
 
           {/* Modal */}
@@ -159,7 +159,7 @@ export default function NotificationModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed top-20 right-4 w-96 max-h-[600px] bg-[#FFF7E4] border-2 border-black shadow-[8px_8px_0px_#000] z-50 flex flex-col"
+            className="fixed top-20 right-4 w-96 max-h-[600px] bg-[#FFF7E4] border-2 border-black shadow-[8px_8px_0px_#000] z-[9999] flex flex-col"
           >
             {/* Header */}
             <div className="p-4 border-b-2 border-black bg-[#F4C430] flex justify-between items-center">
