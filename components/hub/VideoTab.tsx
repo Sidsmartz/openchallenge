@@ -37,9 +37,7 @@ export default function VideoTab() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingSubtitles, setIsGeneratingSubtitles] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [subtitleOffset, setSubtitleOffset] = useState(0);
   const [fontSize, setFontSize] = useState(24);
-  const [fontFamily, setFontFamily] = useState("Arial");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -67,6 +65,18 @@ export default function VideoTab() {
   const [tagInput, setTagInput] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [allTags, setAllTags] = useState<string[]>([]);
+  
+  // Translation states
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [originalSubtitles, setOriginalSubtitles] = useState<Subtitle[]>([]);
+  const [currentSubtitleLanguage, setCurrentSubtitleLanguage] =
+    useState<string>("original");
+  const [generatedLanguages, setGeneratedLanguages] = useState<Set<string>>(
+    new Set(["original"])
+  );
+  const [hindiSubtitles, setHindiSubtitles] = useState<Subtitle[]>([]);
+  const [teluguSubtitles, setTeluguSubtitles] = useState<Subtitle[]>([]);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<VideoJSPlayer | null>(null);
@@ -198,17 +208,52 @@ export default function VideoTab() {
     setVideoUrl(video.video_url);
     setShowUploadForm(false);
 
+    const languages = new Set<string>(["original"]);
+
     if (video.subtitles) {
       try {
         const parsedSubtitles = JSON.parse(video.subtitles);
         setSubtitles(parsedSubtitles);
+        setOriginalSubtitles(parsedSubtitles);
+        setCurrentSubtitleLanguage("original");
       } catch (error) {
         console.error("Error parsing subtitles:", error);
         setSubtitles([]);
+        setOriginalSubtitles([]);
       }
     } else {
       setSubtitles([]);
+      setOriginalSubtitles([]);
     }
+
+    // Load translated subtitles if they exist
+    try {
+      const { data: videoDetails } = await supabase
+        .from("videos")
+        .select("subtitles_hindi, subtitles_telugu")
+        .eq("id", video.id)
+        .single();
+
+      if (videoDetails && (videoDetails as any).subtitles_hindi) {
+        const parsedHindi = JSON.parse((videoDetails as any).subtitles_hindi);
+        setHindiSubtitles(parsedHindi);
+        languages.add("hi");
+      } else {
+        setHindiSubtitles([]);
+      }
+
+      if (videoDetails && (videoDetails as any).subtitles_telugu) {
+        const parsedTelugu = JSON.parse((videoDetails as any).subtitles_telugu);
+        setTeluguSubtitles(parsedTelugu);
+        languages.add("te");
+      } else {
+        setTeluguSubtitles([]);
+      }
+    } catch (error) {
+      console.error("Error loading translated subtitles:", error);
+    }
+
+    setGeneratedLanguages(languages);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -412,7 +457,7 @@ export default function VideoTab() {
     try {
       const { data: videoData, error: videoError } = await supabase
         .from("videos")
-        .select("subtitles")
+        .select("subtitles, subtitles_hindi, subtitles_telugu")
         .eq("file_path", filePath)
         .single();
 
@@ -420,14 +465,40 @@ export default function VideoTab() {
         return;
       }
 
-      if (videoData.subtitles) {
+      const languages = new Set<string>(["original"]);
+
+      if ((videoData as any).subtitles) {
         try {
-          const parsedSubtitles = JSON.parse(videoData.subtitles);
+          const parsedSubtitles = JSON.parse((videoData as any).subtitles);
           setSubtitles(parsedSubtitles);
+          setOriginalSubtitles(parsedSubtitles);
+          setCurrentSubtitleLanguage("original");
         } catch (parseError) {
           console.error("❌ Error parsing subtitles:", parseError);
         }
       }
+
+      if ((videoData as any).subtitles_hindi) {
+        try {
+          const parsedHindi = JSON.parse((videoData as any).subtitles_hindi);
+          setHindiSubtitles(parsedHindi);
+          languages.add("hi");
+        } catch (parseError) {
+          console.error("❌ Error parsing Hindi subtitles:", parseError);
+        }
+      }
+
+      if ((videoData as any).subtitles_telugu) {
+        try {
+          const parsedTelugu = JSON.parse((videoData as any).subtitles_telugu);
+          setTeluguSubtitles(parsedTelugu);
+          languages.add("te");
+        } catch (parseError) {
+          console.error("❌ Error parsing Telugu subtitles:", parseError);
+        }
+      }
+
+      setGeneratedLanguages(languages);
     } catch (error) {
       console.error("💥 Error loading subtitles:", error);
     }
@@ -460,6 +531,8 @@ export default function VideoTab() {
 
       const data = await response.json();
       setSubtitles(data.subtitles);
+      setOriginalSubtitles(data.subtitles); // Store original for translation
+      setCurrentSubtitleLanguage("original");
 
       await saveSubtitlesToDatabase(videoId, data.subtitles);
 
@@ -479,7 +552,7 @@ export default function VideoTab() {
       if (playerRef.current && !playerRef.current.paused()) {
         const currentTime = playerRef.current.currentTime();
         if (currentTime !== null && currentTime !== undefined) {
-          updateSubtitleDisplay(currentTime + subtitleOffset);
+          updateSubtitleDisplay(currentTime);
         }
       }
 
@@ -494,6 +567,102 @@ export default function VideoTab() {
     } finally {
       setIsGeneratingSubtitles(false);
     }
+  };
+
+  // Generate translated subtitles
+  const generateTranslatedSubtitles = async (targetLanguage: "hi" | "te", forceRegenerate = false) => {
+    if (originalSubtitles.length === 0) {
+      alert("No subtitles to translate. Generate subtitles first.");
+      return;
+    }
+
+    if (generatedLanguages.has(targetLanguage) && !forceRegenerate) {
+      // Already generated, just switch to it
+      switchSubtitleLanguage(targetLanguage);
+      return;
+    }
+
+    setIsTranslating(true);
+    setShowRegenerateConfirm(null);
+
+    try {
+      const response = await fetch("/api/translate-subtitles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subtitles: originalSubtitles,
+          targetLanguage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to translate subtitles");
+      }
+
+      const data = await response.json();
+      
+      // Store translated subtitles
+      if (targetLanguage === "hi") {
+        setHindiSubtitles(data.subtitles);
+      } else {
+        setTeluguSubtitles(data.subtitles);
+      }
+      
+      setGeneratedLanguages(new Set([...generatedLanguages, targetLanguage]));
+      setSubtitles(data.subtitles);
+      setCurrentSubtitleLanguage(targetLanguage);
+
+      // Save to database
+      if (videoId) {
+        try {
+          const columnName = targetLanguage === "hi" ? "subtitles_hindi" : "subtitles_telugu";
+          const { error: updateError } = await supabase
+            .from("videos")
+            .update({ [columnName]: JSON.stringify(data.subtitles) } as any)
+            .eq("file_path", videoId);
+          
+          if (updateError) {
+            console.error("Error saving translated subtitles:", updateError);
+          } else {
+            console.log(`✅ ${targetLanguage === "hi" ? "Hindi" : "Telugu"} subtitles saved to database`);
+          }
+        } catch (error) {
+          console.error("Error saving translated subtitles:", error);
+        }
+      }
+
+      // Update subtitle display if video is playing
+      if (playerRef.current && !playerRef.current.paused()) {
+        const currentTime = playerRef.current.currentTime();
+        if (currentTime !== null && currentTime !== undefined) {
+          updateSubtitleDisplay(currentTime);
+        }
+      }
+    } catch (error) {
+      console.error("Error translating subtitles:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate translated subtitles. Please try again."
+      );
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // Switch between generated subtitle languages
+  const switchSubtitleLanguage = (language: string) => {
+    if (language === "original") {
+      setSubtitles(originalSubtitles);
+    } else if (language === "hi" && hindiSubtitles.length > 0) {
+      setSubtitles(hindiSubtitles);
+    } else if (language === "te" && teluguSubtitles.length > 0) {
+      setSubtitles(teluguSubtitles);
+    }
+    setCurrentSubtitleLanguage(language);
   };
 
   const saveSubtitlesToDatabase = async (
@@ -544,23 +713,77 @@ export default function VideoTab() {
     }
   }, [videoUrl]);
 
+  // Update Video.js text track for fullscreen support
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player || subtitles.length === 0) return;
+
+    // Remove existing text tracks
+    const tracks = player.remoteTextTracks();
+    const trackArray = Array.from(tracks as any);
+    trackArray.forEach((track: any) => {
+      player.removeRemoteTextTrack(track);
+    });
+
+    // Create VTT content from subtitles
+    const vttContent = subtitles.map((sub, index) => {
+      const startTime = formatVTTTime(sub.start);
+      const endTime = formatVTTTime(sub.end);
+      return `${index + 1}\n${startTime} --> ${endTime}\n${sub.text}\n`;
+    }).join('\n');
+
+    // Create blob URL for VTT
+    const vttBlob = new Blob([`WEBVTT\n\n${vttContent}`], { type: 'text/vtt' });
+    const vttUrl = URL.createObjectURL(vttBlob);
+
+    // Add text track
+    player.addRemoteTextTrack({
+      kind: 'subtitles',
+      label: currentSubtitleLanguage === 'hi' ? 'Hindi' : currentSubtitleLanguage === 'te' ? 'Telugu' : 'English',
+      srclang: currentSubtitleLanguage === 'hi' ? 'hi' : currentSubtitleLanguage === 'te' ? 'te' : 'en',
+      src: vttUrl,
+      mode: 'showing'
+    }, false);
+
+    return () => {
+      URL.revokeObjectURL(vttUrl);
+    };
+  }, [subtitles, currentSubtitleLanguage]);
+
+  // Helper function to format time for VTT
+  const formatVTTTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 1000);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+  };
+
+  // Apply custom styling to Video.js text tracks
   useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
 
-    const handleTimeUpdate = () => {
-      const currentTime = player.currentTime();
-      if (currentTime !== null && currentTime !== undefined) {
-        updateSubtitleDisplay(currentTime + subtitleOffset);
+    // Style the text track display
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .video-js .vjs-text-track-display {
+        font-size: ${fontSize}px !important;
       }
-    };
-
-    player.on("timeupdate", handleTimeUpdate);
+      .video-js .vjs-text-track-cue {
+        background-color: rgba(0, 0, 0, 0.8) !important;
+        padding: 0.5em 1em !important;
+        border-radius: 0.5em !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
 
     return () => {
-      player.off("timeupdate", handleTimeUpdate);
+      document.head.removeChild(styleElement);
     };
-  }, [subtitles, subtitleOffset, updateSubtitleDisplay]);
+  }, [fontSize]);
 
   const handleSearch = useCallback(() => {
     if (!searchQuery.trim()) {
@@ -720,9 +943,7 @@ export default function VideoTab() {
     }
   };
 
-  const adjustSubtitleOffset = (seconds: number) => {
-    setSubtitleOffset((prev) => prev + seconds);
-  };
+
 
   if (!userRole) {
     return (
@@ -1047,20 +1268,7 @@ export default function VideoTab() {
                 </video>
               </div>
 
-              {currentSubtitle && (
-                <div
-                  ref={subtitleContainerRef}
-                  className="absolute bottom-20 left-0 right-0 flex justify-center px-4 pointer-events-none z-10"
-                  style={{
-                    fontSize: `${fontSize}px`,
-                    fontFamily: fontFamily,
-                  }}
-                >
-                  <div className="bg-black/75 text-white px-4 py-2 rounded-lg max-w-4xl text-center">
-                    {currentSubtitle.text}
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
 
@@ -1071,28 +1279,161 @@ export default function VideoTab() {
                   Controls
                 </h2>
 
-                {subtitles.length === 0 && userRole === "faculty" && (
-                  <div className="space-y-3 mb-6 pb-6 border-b-2 border-gray-200">
-                    <h3 className="text-lg font-bold uppercase tracking-wider">
-                      Generate Subtitles
-                    </h3>
-                    <button
-                      onClick={generateSubtitles}
-                      disabled={isGeneratingSubtitles}
-                      className="w-full px-4 py-2 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
-                    >
-                      {isGeneratingSubtitles
-                        ? "Generating..."
-                        : "Generate Subtitles"}
-                    </button>
-                  </div>
-                )}
+                {userRole === "faculty" && (
+                  <div className="space-y-4 mb-6 pb-6 border-b-2 border-gray-200">
+                    {/* Language Selector - Show first if subtitles exist */}
+                    {generatedLanguages.size > 1 && (
+                      <div>
+                        <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                          Subtitle Language
+                        </label>
+                        <select
+                          value={currentSubtitleLanguage}
+                          onChange={(e) => switchSubtitleLanguage(e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-black bg-white font-bold uppercase tracking-wider"
+                        >
+                          <option value="original">English (Original)</option>
+                          {generatedLanguages.has("hi") && (
+                            <option value="hi">Hindi (हिंदी)</option>
+                          )}
+                          {generatedLanguages.has("te") && (
+                            <option value="te">Telugu (తెలుగు)</option>
+                          )}
+                        </select>
+                      </div>
+                    )}
 
-                {subtitles.length > 0 && (
-                  <div className="p-3 bg-green-50 border-2 border-green-500 mb-6">
-                    <p className="text-sm text-green-800 font-bold">
-                      ✓ Subtitles loaded ({subtitles.length} segments)
-                    </p>
+                    {/* Subtitle Status */}
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">
+                        Subtitle Status
+                      </h3>
+                      
+                      {/* Original Subtitles */}
+                      {subtitles.length === 0 ? (
+                        <button
+                          onClick={generateSubtitles}
+                          disabled={isGeneratingSubtitles}
+                          className="w-full px-4 py-2 bg-[#6B9BD1] text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                        >
+                          {isGeneratingSubtitles
+                            ? "Generating..."
+                            : "Generate English Subtitles"}
+                        </button>
+                      ) : (
+                        <div className="p-3 bg-green-50 border-2 border-green-500">
+                          <p className="text-sm text-green-800 font-bold">
+                            ✓ English Subtitles Available
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Hindi Subtitles */}
+                      {subtitles.length > 0 && (
+                        <>
+                          {generatedLanguages.has("hi") ? (
+                            <div className="space-y-2">
+                              <div className="p-3 bg-purple-50 border-2 border-purple-500 flex items-center justify-between">
+                                <p className="text-sm text-purple-800 font-bold">
+                                  ✓ Hindi Subtitles Available
+                                </p>
+                                <button
+                                  onClick={() => setShowRegenerateConfirm("hi")}
+                                  className="text-xs px-2 py-1 bg-purple-600 text-white border border-black font-bold hover:bg-purple-700"
+                                >
+                                  Regenerate
+                                </button>
+                              </div>
+                              {showRegenerateConfirm === "hi" && (
+                                <div className="p-3 bg-yellow-50 border-2 border-yellow-500">
+                                  <p className="text-xs text-yellow-800 font-bold mb-2">
+                                    Are you sure you want to regenerate Hindi subtitles?
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => generateTranslatedSubtitles("hi", true)}
+                                      disabled={isTranslating}
+                                      className="flex-1 px-3 py-1 bg-red-600 text-white border border-black font-bold text-xs hover:bg-red-700 disabled:bg-gray-400"
+                                    >
+                                      Yes, Regenerate
+                                    </button>
+                                    <button
+                                      onClick={() => setShowRegenerateConfirm(null)}
+                                      className="flex-1 px-3 py-1 bg-gray-600 text-white border border-black font-bold text-xs hover:bg-gray-700"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => generateTranslatedSubtitles("hi")}
+                              disabled={isTranslating}
+                              className="w-full px-4 py-2 bg-purple-600 text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                            >
+                              {isTranslating ? "Generating..." : "Generate Hindi Subtitles"}
+                            </button>
+                          )}
+
+                          {/* Telugu Subtitles */}
+                          {generatedLanguages.has("te") ? (
+                            <div className="space-y-2">
+                              <div className="p-3 bg-indigo-50 border-2 border-indigo-500 flex items-center justify-between">
+                                <p className="text-sm text-indigo-800 font-bold">
+                                  ✓ Telugu Subtitles Available
+                                </p>
+                                <button
+                                  onClick={() => setShowRegenerateConfirm("te")}
+                                  className="text-xs px-2 py-1 bg-indigo-600 text-white border border-black font-bold hover:bg-indigo-700"
+                                >
+                                  Regenerate
+                                </button>
+                              </div>
+                              {showRegenerateConfirm === "te" && (
+                                <div className="p-3 bg-yellow-50 border-2 border-yellow-500">
+                                  <p className="text-xs text-yellow-800 font-bold mb-2">
+                                    Are you sure you want to regenerate Telugu subtitles?
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => generateTranslatedSubtitles("te", true)}
+                                      disabled={isTranslating}
+                                      className="flex-1 px-3 py-1 bg-red-600 text-white border border-black font-bold text-xs hover:bg-red-700 disabled:bg-gray-400"
+                                    >
+                                      Yes, Regenerate
+                                    </button>
+                                    <button
+                                      onClick={() => setShowRegenerateConfirm(null)}
+                                      className="flex-1 px-3 py-1 bg-gray-600 text-white border border-black font-bold text-xs hover:bg-gray-700"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => generateTranslatedSubtitles("te")}
+                              disabled={isTranslating}
+                              className="w-full px-4 py-2 bg-indigo-600 text-white border-2 border-black font-bold uppercase tracking-wider hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                            >
+                              {isTranslating ? "Generating..." : "Generate Telugu Subtitles"}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {isTranslating && (
+                      <div className="p-3 bg-blue-50 border-2 border-blue-500">
+                        <p className="text-sm text-blue-800 font-bold">
+                          ⏳ Generating translation...
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1124,8 +1465,8 @@ export default function VideoTab() {
                 </button>
               </div>
 
-              {/* Subtitle Search - Students Only */}
-              {userRole === "student" && subtitles.length > 0 && (
+              {/* Subtitle Search - Both Faculty and Students */}
+              {subtitles.length > 0 && (
                 <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
                   <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
                     Search in Video
@@ -1267,69 +1608,50 @@ export default function VideoTab() {
 
             <div className="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_#000]">
               <h2 className="text-xl font-bold mb-4 uppercase tracking-tight">
-                Subtitle Settings
+                Settings
               </h2>
 
               <div className="space-y-4">
+                {/* Language Selector for Students (if translations exist) */}
+                {userRole === "student" && subtitles.length > 0 && generatedLanguages.size > 1 && (
+                  <div>
+                    <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
+                      Subtitle Language
+                    </label>
+                    <select
+                      value={currentSubtitleLanguage}
+                      onChange={(e) => switchSubtitleLanguage(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-black bg-white font-bold uppercase tracking-wider"
+                    >
+                      <option value="original">English (Original)</option>
+                      {generatedLanguages.has("hi") && (
+                        <option value="hi">Hindi (हिंदी)</option>
+                      )}
+                      {generatedLanguages.has("te") && (
+                        <option value="te">Telugu (తెలుగు)</option>
+                      )}
+                    </select>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
-                    Font Size: {fontSize}px
+                    Subtitle Size: {fontSize}px
                   </label>
                   <input
                     type="range"
-                    min="12"
-                    max="48"
+                    min="16"
+                    max="36"
                     value={fontSize}
                     onChange={(e) =>
                       setFontSize(parseInt(e.target.value, 10))
                     }
                     className="w-full"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
-                    Font Family:
-                  </label>
-                  <select
-                    value={fontFamily}
-                    onChange={(e) => setFontFamily(e.target.value)}
-                    className="w-full px-3 py-2 border-2 border-black bg-white font-medium"
-                  >
-                    <option value="Arial">Arial</option>
-                    <option value="Helvetica">Helvetica</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Georgia">Georgia</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold mb-2 uppercase tracking-wider">
-                    Timing Offset: {subtitleOffset > 0 ? "+" : ""}
-                    {subtitleOffset.toFixed(1)}s
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => adjustSubtitleOffset(-0.5)}
-                      className="px-3 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] transition-all"
-                    >
-                      -0.5s
-                    </button>
-                    <button
-                      onClick={() => adjustSubtitleOffset(0.5)}
-                      className="px-3 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] transition-all"
-                    >
-                      +0.5s
-                    </button>
+                  <div className="flex justify-between text-xs text-gray-600 mt-1">
+                    <span>Small</span>
+                    <span>Large</span>
                   </div>
-                  <button
-                    onClick={() => setSubtitleOffset(0)}
-                    className="w-full mt-2 px-3 py-2 bg-white border-2 border-black font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[2px_2px_0px_#000] transition-all"
-                  >
-                    Reset
-                  </button>
                 </div>
               </div>
             </div>

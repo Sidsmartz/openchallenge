@@ -34,6 +34,10 @@ export default function VideoPage() {
     useState<string>("none");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [inputMode, setInputMode] = useState<"upload" | "youtube">("upload");
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [originalSubtitles, setOriginalSubtitles] = useState<Subtitle[]>([]);
+  const [currentSubtitleLanguage, setCurrentSubtitleLanguage] =
+    useState<string>("original");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<VideoJSPlayer | null>(null);
@@ -310,6 +314,8 @@ export default function VideoPage() {
 
       const data = await response.json();
       setSubtitles(data.subtitles);
+      setOriginalSubtitles(data.subtitles); // Store original for translation
+      setCurrentSubtitleLanguage("original");
 
       // Save subtitles to database
       await saveSubtitlesToDatabase(videoId, data.subtitles);
@@ -330,6 +336,63 @@ export default function VideoPage() {
       );
     } finally {
       setIsGeneratingSubtitles(false);
+    }
+  };
+
+  // Translate subtitles
+  const translateSubtitles = async (targetLanguage: "hi" | "te") => {
+    if (originalSubtitles.length === 0) {
+      alert("No subtitles to translate. Generate subtitles first.");
+      return;
+    }
+
+    setIsTranslating(true);
+
+    try {
+      const response = await fetch("/api/translate-subtitles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subtitles: originalSubtitles,
+          targetLanguage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to translate subtitles");
+      }
+
+      const data = await response.json();
+      setSubtitles(data.subtitles);
+      setCurrentSubtitleLanguage(targetLanguage);
+
+      // Update subtitle display if video is playing
+      if (playerRef.current && !playerRef.current.paused()) {
+        const currentTime = playerRef.current.currentTime();
+        if (currentTime !== null && currentTime !== undefined) {
+          updateSubtitleDisplay(currentTime + subtitleOffset);
+        }
+      }
+    } catch (error) {
+      console.error("Error translating subtitles:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to translate subtitles. Please try again."
+      );
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // Restore original subtitles
+  const restoreOriginalSubtitles = () => {
+    if (originalSubtitles.length > 0) {
+      setSubtitles(originalSubtitles);
+      setCurrentSubtitleLanguage("original");
     }
   };
 
@@ -765,10 +828,53 @@ export default function VideoPage() {
                   )}
 
                   {subtitles.length > 0 && (
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mt-6">
-                      <p className="text-sm text-green-800 dark:text-green-300">
-                        ✓ Subtitles loaded ({subtitles.length} segments)
-                      </p>
+                    <div className="space-y-3 mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <p className="text-sm text-green-800 dark:text-green-300">
+                          ✓ Subtitles loaded ({subtitles.length} segments)
+                          {currentSubtitleLanguage !== "original" && (
+                            <span className="ml-2">
+                              - Currently showing:{" "}
+                              {currentSubtitleLanguage === "hi"
+                                ? "Hindi"
+                                : currentSubtitleLanguage === "te"
+                                ? "Telugu"
+                                : "Original"}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Translate Subtitles
+                      </h3>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => translateSubtitles("hi")}
+                          disabled={isTranslating}
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                        >
+                          {isTranslating ? "Translating..." : "Translate to Hindi"}
+                        </button>
+
+                        <button
+                          onClick={() => translateSubtitles("te")}
+                          disabled={isTranslating}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                        >
+                          {isTranslating ? "Translating..." : "Translate to Telugu"}
+                        </button>
+                      </div>
+
+                      {currentSubtitleLanguage !== "original" && (
+                        <button
+                          onClick={restoreOriginalSubtitles}
+                          className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                        >
+                          Restore Original Subtitles
+                        </button>
+                      )}
                     </div>
                   )}
 

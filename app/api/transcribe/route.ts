@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import { execFile } from "child_process";
@@ -215,6 +215,17 @@ export async function POST(request: NextRequest) {
       } catch (dbError) {
         console.error("Error saving subtitles to database:", dbError);
         // Don't fail the request if database update fails
+      }
+
+      // Delete the local video file after successful transcription
+      try {
+        if (existsSync(videoPath)) {
+          await unlink(videoPath);
+          console.log("Local video file deleted successfully");
+        }
+      } catch (deleteError) {
+        console.error("Error deleting local video file:", deleteError);
+        // Don't fail the request if deletion fails
       }
 
       return NextResponse.json({
